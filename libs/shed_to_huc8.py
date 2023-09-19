@@ -17,10 +17,13 @@
 # resources like this might be useful for querying data for a particular area of interest
 # # but just need the national seamless WBD data for this national scale analyses
 
+# also trying phydrogeo package: https://github.com/hyriver/pygeohydro
+
+
 # Decided to just download whole WBD dataset hosted on Amazon Web services, available as Geodatabase
 
 import os, requests, zipfile, io, geopandas
-
+import pygeohydro
 
 def wbd_download(out_dir):
     """
@@ -44,10 +47,10 @@ def wbd_download(out_dir):
 # wbd_download(out_dir='E:/SDSU_GEOG/Thesis/Data/WBD_Test')
 
 
-def shed_to_huc8(camles_shed_gdf, wbd_huc8_gdf):
+def camels_to_huc8(camles_shed_gdf, wbd_huc8_gdf):
     """
-    Function to intake a watershed boundary and retain HUC8 watersheds that make up/intersect with input watershed
-    :param camles_shed_gdf: geodataframe of watershed(s) of interest. for current project this is one or more CAMELS watersheds
+    Function to intake a camels watershed boundary and retain HUC8 watersheds that make up/intersect with input watershed
+    :param camles_shed_gdf: geodataframe of watershed(s) of interest
     :param wbd_huc8_gdf: geodataframe of HUC8 Watershed Boundary Dataset, downloaded using wbs_download function
     :return: geodataframe of all huc8 watersheds that overlap with watershed of interest.
     """
@@ -68,6 +71,27 @@ def shed_to_huc8(camles_shed_gdf, wbd_huc8_gdf):
     huc8_camels_final = huc8_camels_nodup[['geometry', 'huc8', 'hru_id']]
     print(huc8_camels_final)
 
+def shed_to_huc8(shed_gdf, wbd_huc8_gdf):
+    """
+    Function to intake a watershed boundary and retain HUC8 watersheds that make up/intersect with input watershed
+    :param camles_shed_gdf: geodataframe of watershed(s) of interest
+    :param wbd_huc8_gdf: geodataframe of HUC8 Watershed Boundary Dataset, downloaded using wbs_download function
+    :return: geodataframe of all huc8 watersheds that overlap with watershed of interest.
+    """
+    # convert to same CRS
+    shed_alb = shed_gdf.to_crs(epsg=5070)
+    huc8_alb = wbd_huc8_gdf.to_crs(epsg=5070)
+
+    # retain all huc8 watersheds for the watershed of interest
+    shed_huc8 = geopandas.sjoin(huc8_alb, shed_alb, op='intersects', how='inner')
+    # checking column names
+    print(shed_huc8.columns.tolist())
+
+    # retaining geometry and huc8 designation
+    shed_huc8_final = shed_huc8[['geometry', 'huc8']]
+    print(shed_huc8_final)
+
+
 # testing
 # huc8_gdf = geopandas.read_file('E:/SDSU_GEOG/Thesis/Data/WBD_Test/WBD_National_GDB.gdb', layer='WBDHU8')
 # print(huc8_gdf)
@@ -77,3 +101,10 @@ def shed_to_huc8(camles_shed_gdf, wbd_huc8_gdf):
 # # need to add leading zeros to gauge ids, so 8 total digits
 # # first convert to string, then add zero
 # camels['hru_id'] = camels['hru_id'].astype(str).str.zfill(8)
+
+# hydroshare resource
+attrs, qobs = pygeohydro.get_camels()
+
+# or https://gdex.ucar.edu/dataset/camels.html
+
+wbd = pygeohydro.WBD("huc8")
