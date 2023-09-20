@@ -16,6 +16,8 @@ import os
 
 def nwi_download_api(shed_gdf, out_dir, save=False):
     """
+    Function to query NWI data from the ArcGIS Rest API service layer using a watershed bounding area.
+
     :param shed_gdf: watershed polygon geodataframe
     :param out_dir: location to save resulting wetland dataset
     :param save: if save is True, save output
@@ -35,13 +37,14 @@ def nwi_download_api(shed_gdf, out_dir, save=False):
     else:
         print("CRS is already EPSG:4269.")
 
-    # for watershed polygon in geodataframe:
-    # 1) download wetland shapefiles based on a bounding box
-    # 2) clip wetland geodataframe to exact polygon of watershed
-    # 3) save dataset to output directory
+    # workflow: for the input watershed polygon geodataframe...
+    # 1) download wetland objectids for input watershed polygon as geojson based on a bounding box
+    # 2) iterate over returned subsets of objectids, and download wetland geometries based on the objectids
+    # 3) aggregate wetland data into final geodataframe
 
+    # get bounding box of watershed
     bounds_list = shed_gdf.total_bounds.tolist()
-    # convert to string, with commas separating
+    # convert to string, with commas separating, for proper formatting
     bounds_string = [str(item) for item in bounds_list]
     bbox = ', '.join(bounds_string)
     print(bbox)
@@ -54,7 +57,6 @@ def nwi_download_api(shed_gdf, out_dir, save=False):
         "spatialRel": "esriSpatialRelIntersects",
         "where": "1=1",  # Retrieve all features (modify as needed)
         "inSR": "4269",  # input spatial reference
-        "outSR": "4269",
         "outFields": "WETLAND_TYPE,ATTRIBUTE",  # specify fields of interest
         "returnIdsOnly": "true",
         # "outFields": "*",  # retrieve all fields
@@ -94,15 +96,11 @@ def nwi_download_api(shed_gdf, out_dir, save=False):
     for i in range(0, len(objectid_list), size):
         subset = objectid_list[i:i + size]
 
-        # processs that subset
-        # print("Processing Chunk:", subset)
-
         # convert to string, with commas separating
         ids_string = [str(item) for item in subset]
         ids_final = ', '.join(ids_string)
 
         # try sending the second request, else return error information
-
         # fill out query parameters, for NWI wetland map service
         query_params_2 = {
             "f": "geojson",  # GeoJSON format for the response
