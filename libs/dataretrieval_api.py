@@ -1,4 +1,5 @@
-# Alternative script, downloading National Wetland Inventory using ArcGIS REST API and query functionalities
+# Alternative script, downloading datasets using ArcGIS REST API and other API query functionalities
+# datasets: National Wetland Inventory, USGS daily discharge based on gageID
 # Developed this workflow for more efficiency and flexibility in data downloading
 
 # But there is a limit to the amount of data you can download... default 1000 features :(
@@ -160,11 +161,81 @@ def nwi_download_api(shed_gdf, out_dir, save=False):
     return nwi_gdf_final
 
 
+# # testing function
+# test_shed_gdf = geopandas.read_file("C:/Users/holta/Documents/ArcGIS_Projects/wetland_metrics/Data/camels_test_basin_3.shp")
+# test_nwi_out = nwi_download_api(shed_gdf=test_shed_gdf,
+#                                 out_dir="C:/Users/holta/Documents/ArcGIS_Projects/wetland_metrics/Data", save=True)
+#
+# test_out_2 = test_nwi_out.overlay(test_shed_gdf, how='intersection')
+# print(test_out_2)
+
+
+def usgs_daily_download_api(siteid, out_dir, save=False):
+    """
+    Fuction to download USGS daily discharge data, from USGS Daily Values Site Web REST Service
+    :param siteid: site identifier, 8 digits long, as string
+    :param out_dir: location to save dataset
+    :param save: if true, save the dataset
+    :return: dataframe with daily discharge values
+    """
+
+    # base URL of the USGS NWIS REST API
+    base_url = "https://waterservices.usgs.gov/nwis/dv"
+
+    # the parameters for the query
+    # 1 Oct 1989 to 30 Sep 2009
+    params = {
+        "format": "json",
+        "sites": siteid,
+        "startDT": "1989-10-01",
+        "endDT": "2009-09-30",
+        "parameterCd": "00060"  # parameter code for daily discharge
+    }
+
+    try:
+        # GET request to retrieve the data
+        response = requests.get(base_url, params=params)
+        response.raise_for_status()  # Raise an exception if there's an HTTP error
+
+        # parse the JSON response
+        data = response.json()
+
+        # extract date and discharge values
+        time_series = data["value"]["timeSeries"][0]["values"][0]["value"]
+
+        # create a DataFrame of data
+        q_df = pandas.DataFrame(time_series)
+        # rename columns
+        q_df.rename(columns={"dateTime": "date", "value": "q_daily_cfs"}, inplace=True)
+
+        # convert date column to datetime format
+        q_df["date"] = pandas.to_datetime(q_df["date"])
+
+        print(q_df)
+
+        if save:
+            # create output file path
+            file_name = 'daily_discharge.csv'
+
+            # create full file path
+            file_path = os.path.join(out_dir, file_name)
+            # save the GeoDataFrame as csv
+            q_df.to_csv(file_path, index=False)
+            print(f"Downloaded data and saved as {file_path}")
+        else:
+            print("Dataframe not saved.")
+
+        return q_df
+
+    except requests.exceptions.RequestException as e:
+        print("Failed to retrieve data:", str(e))
+    except Exception as e:
+        print("An error occurred:", str(e))
+
 # testing function
-test_shed_gdf = geopandas.read_file("C:/Users/holta/Documents/ArcGIS_Projects/wetland_metrics/Data/camels_test_basin_3.shp")
-test_nwi_out = nwi_download_api(shed_gdf=test_shed_gdf,
-                                out_dir="C:/Users/holta/Documents/ArcGIS_Projects/wetland_metrics/Data", save=True)
+test_df = usgs_daily_download_api(siteid="02322800",
+                                  out_dir="C:/Users/holta/Documents/ArcGIS_Projects/wetland_metrics/Data", save=True)
 
-test_out_2 = test_nwi_out.overlay(test_shed_gdf, how='intersection')
-print(test_out_2)
-
+# Eventually, want workflow to take in all camels watershed boundaries
+# and workflow to take in site ids of reference gages from GagesII dataset (not including camel watersheds)
+# how to do this? note that hru_id is in the camels dataset, but have to add a leading zero to some of the strings
