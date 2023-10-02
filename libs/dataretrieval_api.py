@@ -18,7 +18,6 @@ import os
 def nwi_download_api(shed_gdf, out_dir, save=False):
     """
     Function to query NWI data from the ArcGIS Rest API service layer using a watershed bounding area.
-
     :param shed_gdf: watershed polygon geodataframe
     :param out_dir: location to save resulting wetland dataset
     :param save: if save is True, save output
