@@ -1,0 +1,114 @@
+# Script to explore USGS streamflow data at the reference watersheds
+# will eventually move this workflow over to python functions
+
+# this seemed like a useful site also: https://bcgov.github.io/fasstr/articles/fasstr_dataRetrieval.html
+
+library(dataRetrieval)
+library(tidyverse)
+library(lubridate)
+library(R.matlab)
+
+
+#### DATA DOWNLOAD ####
+
+# Try the code below with the site.code here, then use the site code for your watershed.
+site.code = "02322800"  #  The USGS stream gage code
+
+what.data = whatNWISdata(siteNumber = as.character(site.code))
+
+what.data.discharge = what.data %>% 
+  filter(parm_cd == "00060")
+
+site.info <- readNWISsite(site.code)
+drain.area.mi2 = site.info$drain_area_va
+drain.area.mm2 = drain.area.mi2 * (1609.34^2) * (1000^2)
+
+# drain.area.mi2
+# drainge.area.ft2 = drain.area.mi2*(5280^2)
+
+# Download discharge data at this location
+parameter.code = "00060"  # this is the code for stream discharge.
+start.date = ""  # Blanks get all of the data
+end.date = ""
+flow.df = readNWISdv(site.code,parameter.code,start.date,end.date)
+head(flow.df)
+
+
+#### DATA PREPARATION ####
+
+# generally want all data in between 1989 and 2009, which is same time period as camels
+flow.df.2 = flow.df %>% 
+  rename(Q.cfs = X_00060_00003, Q.cfs.cd = X_00060_00003_cd) %>% 
+  filter(Date >= as.Date("1989-10-01")) %>% 
+  filter(Date <= as.Date("2009-09-30")) %>% 
+  mutate(Q.mm.day = Q.cfs * 60 * 60 * 24 * (1/3.28084)^3 * (1000^3) * (1/drain.area.mm2))
+
+# checking an example of data completeness based on water year
+flow.df.explore = flow.df.2 %>% 
+  mutate(month = month(Date)) %>%
+  mutate(year = year(Date)) %>% 
+  mutate(wy = case_when(month < 10 ~ year, 
+                        month >= 10 ~ year + 1)) %>% 
+  group_by(wy) %>% 
+  summarize(count = n())
+
+# visualizing time series
+plot(flow.df.2$Date,flow.df.2$Q.mm.day,xlab="Date",ylab="Daily Discharge, mm/day", type = 'l')
+
+
+
+# now filling in data gaps with NANs, as per TOSSH Toolbox requirements
+# want to do this dynamically, and flexible to datasets that have smaller time periods
+# therefore, assigning start and end dates to full data through based on data
+
+start.month = month(flow.df.2$Date[1])
+start.year = year(flow.df.2$Date[1])
+start.date = if (start.month >= 10) {
+  as.Date(paste(start.year, "10", "01", sep = "-"))
+} else {
+  as.Date(paste(start.year - 1, "10", "01", sep = "-"))
+}
+
+end.month = month(flow.df.2$Date[nrow(flow.df.2)])
+end.year =  year(flow.df.2$Date[nrow(flow.df.2)])
+end.date = if (end.month >= 10) {
+  as.Date(paste(end.year + 1, "09", "30", sep = "-"))
+} else {
+  as.Date(paste(end.year, "09", "30", sep = "-"))
+}
+
+# first creating dataframe of dates
+Date.full <- seq(start.date, end.date, by = "day")
+Date.full.df = as.data.frame(Date.full)
+
+# joining data to date dataframe so that time series is filled in
+flow.df.full = Date.full.df %>% 
+  left_join(flow.df.2, by = c("Date.full" = "Date")) %>% 
+  mutate(Q.mm.day = case_when(is.na(Q.mm.day) ~ 'NaN',
+                           TRUE ~ as.character(Q.mm.day))) %>% 
+  mutate(datetime = format(Date.full, "%d-%b-%Y"))
+
+
+
+# checking if all water years will filled in with rows
+flow.df.full.explore = flow.df.full %>% 
+  mutate(month = month(Date.full)) %>%
+  mutate(year = year(Date.full)) %>% 
+  mutate(wy = case_when(month < 10 ~ year, 
+                        month >= 10 ~ year + 1)) %>% 
+  group_by(wy) %>% 
+  summarize(count = n())
+
+
+# want at least 5 years of data??
+
+
+#### DATA EXPORT ####
+
+tryCatch({
+  # Uniquely named
+  writeMat("C:/Users/holta/Downloads/matdata_test.mat", datetime = as.matrix(flow.df.full$datetime),
+           Q = as.matrix(flow.df.full$Q.mm.day))
+}, error = function(ex) {
+  cat("ERROR:", ex$message, "\n")
+})
