@@ -28,10 +28,11 @@ drain.area.mm2 = drain.area.mi2 * (1609.34^2) * (1000^2)
 
 # Download discharge data at this location
 parameter.code = "00060"  # this is the code for stream discharge.
-start.date = ""  # Blanks get all of the data
-end.date = ""
-flow.df = readNWISdv(site.code,parameter.code,start.date,end.date)
+start = ""  # Blanks get all of the data
+end = ""
+flow.df = readNWISdv(site.code,parameter.code,start,end)
 head(flow.df)
+flow.df.daily = readNWISdv(site.code,parameter.code,start,end)
 
 
 #### DATA PREPARATION ####
@@ -84,10 +85,16 @@ Date.full.df = as.data.frame(Date.full)
 # joining data to date dataframe so that time series is filled in
 flow.df.full = Date.full.df %>% 
   left_join(flow.df.2, by = c("Date.full" = "Date")) %>% 
-  mutate(Q.mm.day = case_when(is.na(Q.mm.day) ~ 'NaN',
-                           TRUE ~ as.character(Q.mm.day))) %>% 
+  # mutate(Q.mm.day = case_when(is.na(Q.mm.day) ~ 'NaN',
+  #                          TRUE ~ as.character(Q.mm.day))) %>% 
+  mutate(Q.mm.day = case_when(Q.mm.day < 0 ~ 0,
+                           TRUE ~ Q.mm.day)) %>%
   mutate(datetime = format(Date.full, "%d-%b-%Y"))
 
+
+## checking data quality codes???
+# https://help.waterdata.usgs.gov/codes-and-parameters/instantaneous-value-qualification-code-uv_rmk_cd
+# A is approved, P is provisional, Ae is approved but edited, etc.
 
 
 # checking if all water years will filled in with rows
@@ -105,10 +112,21 @@ flow.df.full.explore = flow.df.full %>%
 
 #### DATA EXPORT ####
 
+# try exporting as matlab data file, with datetime and Q, for signature functions
+
 tryCatch({
   # Uniquely named
-  writeMat("C:/Users/holta/Downloads/matdata_test.mat", datetime = as.matrix(flow.df.full$datetime),
+  writeMat("C:/Users/holta/Documents/matdata_test_2.mat", datetime = as.matrix(flow.df.full$datetime),
            Q = as.matrix(flow.df.full$Q.mm.day))
 }, error = function(ex) {
   cat("ERROR:", ex$message, "\n")
 })
+
+
+
+# gap analysis
+
+# idea from Trent...
+# every year, count number of NAs in flow timeseries
+# report chart... on axes as gague ID, another as year/percent completeness
+# then color by that percent completeness green to red
