@@ -14,6 +14,10 @@ from shapely.geometry import shape
 from fiona.crs import from_epsg
 import os
 
+from datetime import datetime
+import numpy
+import scipy.io
+
 
 def nwi_download_api(shed_gdf, out_dir, save=False):
     """
@@ -171,7 +175,7 @@ def nwi_download_api(shed_gdf, out_dir, save=False):
 
 def usgs_daily_download_api(siteid, out_dir, save=False):
     """
-    Fuction to download USGS daily discharge data, from USGS Daily Values Site Web REST Service
+    Function to download USGS daily discharge data, from USGS Daily Values Site Web REST Service
     :param siteid: site identifier, 8 digits long, as string
     :param out_dir: location to save dataset
     :param save: if true, save the dataset
@@ -231,10 +235,115 @@ def usgs_daily_download_api(siteid, out_dir, save=False):
     except Exception as e:
         print("An error occurred:", str(e))
 
-# testing function
-test_df = usgs_daily_download_api(siteid="02322800",
-                                  out_dir="C:/Users/holta/Documents/ArcGIS_Projects/wetland_metrics/Data", save=True)
 
-# Eventually, want workflow to take in all camels watershed boundaries
+def usgs_drain_area_download_api(siteid):
+    """
+    Function to download USGS daily discharge data, from USGS Daily Values Site Web REST Service.
+    Based on function readNWISsite.R in dataRetrieval Package (https://github.com/DOI-USGS/dataRetrieval/blob/HEAD/R/readNWISsite.R).
+    :param siteid: site identifier, 8 digits long, as string
+    :return: a value of the basin drainage area
+    """
+
+    url = f"https://waterservices.usgs.gov/nwis/site/?siteOutput=Expanded&format=rdb&sites={siteid}"
+    # read data directly, which returns all the expanded site info
+    data = pandas.read_csv(url, sep='\t', comment='#', header=0)
+
+    # repalce '.' with NaN in columns containing '_va'
+    va_columns = [col for col in data.columns if '_va' in col]
+    data[va_columns] = data[va_columns].replace('.', pandas.NA)
+
+    # Convert columns containing '_va' to numeric
+    data[va_columns] = data[va_columns].apply(pandas.to_numeric, errors='coerce')
+
+    # extract drainage area value from second row
+    drain_area_va = data['drain_area_va'].iloc[1]
+
+    # convert miles to mm2
+    drain_area_mm2 = drain_area_va * (1609.34 ** 2) * (1000 ** 2)
+
+    return drain_area_mm2
+
+# should function return matlab file format instead??
+def usgs_daily_prep(flow_cfs_df, drain_area):
+    """
+    Function to prep USGS daily flow data for the TOSSH Toolbox. units are converted to mm/day, time series is filled
+    out with NaNs, negative flow values are converted to NaN, date ranges are finalized.
+    :param flow_cfs_df: dataframe of downloaded USGS flow data (columns 'date', 'qualifiers', 'q_daily_cfs')
+    :param drain_area: value of drainage area for the site, in square milimeters
+    :return: dataframe of USGS discharge data, including flow values, dates, and qualifiers
+    """
+
+    flow_df = flow_cfs_df
+    # Filtering data within the date range
+    # making sure flow values are numeric format
+    flow_df = flow_df[(flow_df['date'] >= '1989-10-01') & (flow_df['date'] <= '2009-09-30')]
+    flow_df['q_daily_cfs'] = pandas.to_numeric(flow_df['q_daily_cfs'], errors='coerce')
+
+    # Calculating flow in mm/day, required for TOSSH
+    flow_df['q_daily_mm_day'] = flow_df['q_daily_cfs'] * 60 * 60 * 24 * (1 / 3.28084) ** 3 * (1000 ** 3) * (
+                1 / drain_area)
+
+    # Filling gaps with NaNs
+    start_date = flow_df['date'].min()
+    end_date = flow_df['date'].max()
+    print(start_date, end_date)
+
+    if start_date.month >= 10:
+        start_date_final = datetime(start_date.year, 10, 1)
+    else:
+        start_date_final = datetime(start_date.year - 1, 10, 1)
+
+    if end_date.month >= 10:
+        end_date_final = datetime(end_date.year + 1, 9, 30)
+    else:
+        end_date_final = datetime(end_date.year, 9, 30)
+
+    # Convert the start and end dates back to the desired format ('%Y-%m-%d')
+    start_date_str = start_date_final.strftime('%Y-%m-%d')
+    end_date_str = end_date.strftime('%Y-%m-%d')
+
+    date_range = pandas.date_range(start_date_str, end_date_str)
+    print(date_range)
+
+    # Create a DataFrame with all dates in the range
+    date_df = pandas.DataFrame({'date': date_range})
+
+    # Merge the original data with the full date range DataFrame to fill gaps
+    flow_df_full = date_df.merge(flow_df, on='date', how='left')
+    # print(flow_df_full)
+
+    # Replace negative Q.mm.day values with 0
+    flow_df_full['q_daily_mm_day'] = numpy.where(flow_df_full['q_daily_mm_day'] < 0, 0, flow_df_full['q_daily_mm_day'])
+
+    # Format datetime
+    flow_df_full['datetime'] = flow_df_full['date'].dt.strftime('%d-%b-%Y')
+
+    return flow_df_full
+
+
+# testing functions, on one USGS site
+
+test_out = usgs_drain_area_download_api(siteid="02322800")
+# print(test_out)
+test_df = usgs_daily_download_api(siteid="02322800",
+                                  out_dir="C:/Users/holta/Documents/ArcGIS_Projects/wetland_metrics/Data", save=False)
+# print(test_df)
+
+test_df_prepped = usgs_daily_prep(test_df, test_out)
+# print(test_df_prepped)
+
+
+# Convert the DataFrame to a dictionary
+# Create a dictionary with each column as a separate array
+# Create a dictionary with keys 'datetime' and 'Q'
+matlab_dict = {
+    'datetime': test_df_prepped['date'].values.tolist(),
+    'Q': test_df_prepped['q_daily_mm_day'].values.tolist()
+}
+# Save the dictionary to a MATLAB .mat file
+scipy.io.savemat('C:/Users/holta/Documents/matdata_test_3.mat', matlab_dict)
+
+
+# Eventually, want to run workflow to take in all camels watershed boundaries
 # and workflow to take in site ids of reference gages from GagesII dataset (not including camel watersheds)
 # how to do this? note that hru_id is in the camels dataset, but have to add a leading zero to some of the strings
