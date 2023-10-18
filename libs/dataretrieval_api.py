@@ -218,7 +218,7 @@ def usgs_daily_download_api(siteid, out_dir, save=False):
 
         if save:
             # create output file path
-            file_name = 'daily_discharge.csv'
+            file_name = siteid + ".csv"
 
             # create full file path
             file_path = os.path.join(out_dir, file_name)
@@ -263,6 +263,7 @@ def usgs_drain_area_download_api(siteid):
 
     return drain_area_mm2
 
+
 # should function return matlab file format instead??
 def usgs_daily_prep(siteid, flow_cfs_df, drain_area, out_dir, save=False):
     """
@@ -283,12 +284,12 @@ def usgs_daily_prep(siteid, flow_cfs_df, drain_area, out_dir, save=False):
 
     # Calculating flow in mm/day, required for TOSSH
     flow_df['q_mm_day'] = flow_df['q_daily_cfs'] * 60 * 60 * 24 * (1 / 3.28084) ** 3 * (1000 ** 3) * (
-                1 / drain_area)
+            1 / drain_area)
 
     # Filling gaps with NaNs
     start_date = flow_df['date'].min()
     end_date = flow_df['date'].max()
-    print(start_date, end_date)
+    # print(start_date, end_date)
 
     if start_date.month >= 10:
         start_date_final = datetime(start_date.year, 10, 1)
@@ -305,7 +306,7 @@ def usgs_daily_prep(siteid, flow_cfs_df, drain_area, out_dir, save=False):
     end_date_str = end_date_final.strftime('%Y-%m-%d')
 
     date_range = pandas.date_range(start_date_str, end_date_str)
-    print(date_range)
+    # print(date_range)
 
     # Create a DataFrame with all dates in the range
     date_df = pandas.DataFrame({'date': date_range})
@@ -341,34 +342,9 @@ def usgs_daily_prep(siteid, flow_cfs_df, drain_area, out_dir, save=False):
     return flow_df_final
 
 
-# testing functions, on one USGS site
-
-test_out = usgs_drain_area_download_api(siteid="02322800")
-# print(test_out)
-test_df = usgs_daily_download_api(siteid="02322800",
-                                  out_dir="C:/Users/holta/Documents/ArcGIS_Projects/wetland_metrics/Data", save=False)
-# print(test_df)
-
-test_df_prepped = usgs_daily_prep(siteid="02322800", drain_area=test_out, flow_cfs_df=test_df,
-                                  out_dir="C:/Users/holta/Documents", save=True)
-
-# # Create a matrix of dates
-# date_matrix = numpy.array(test_df_prepped['datetime']).reshape(len(test_df_prepped), 1)
-# flow_matrix = numpy.array(test_df_prepped['q_daily_cfs']).reshape(len(test_df_prepped), 1)
-#
-# # Convert the DataFrame to a dictionary
-# # Create a dictionary with each column as a separate array
-# # Create a dictionary with keys 'datetime' and 'Q'
-# matlab_dict = {
-#     'datetime': date_matrix,
-#     'Q': flow_matrix
-# }
-# # Save the dictionary to a MATLAB .mat file
-# scipy.io.savemat('C:/Users/holta/Documents/matdata_test_3.mat', matlab_dict)
-
-
-# Eventually, want to run workflow to take in all camels watershed boundaries
-# and workflow to take in site ids of reference gages from GagesII dataset (not including camel watersheds)
-# how to do this? note that hru_id is in the camels dataset, but have to add a leading zero to some of the strings
-
-
+# # testing functions, on one USGS site
+# test_out = usgs_drain_area_download_api(siteid="02322800")
+# test_df = usgs_daily_download_api(siteid="02322800",
+#                                   out_dir="C:/Users/holta/Documents/ArcGIS_Projects/wetland_metrics/Data", save=False)
+# test_df_prepped = usgs_daily_prep(siteid="02322800", drain_area=test_out, flow_cfs_df=test_df,
+#                                   out_dir="C:/Users/holta/Documents", save=True)
