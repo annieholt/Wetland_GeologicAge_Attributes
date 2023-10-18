@@ -12,7 +12,7 @@ library(R.matlab)
 #### DATA DOWNLOAD ####
 
 # Try the code below with the site.code here, then use the site code for your watershed.
-site.code = "02322800"  #  The USGS stream gage code
+site.code = "01607500"  #  The USGS stream gage code
 
 what.data = whatNWISdata(siteNumber = as.character(site.code))
 
@@ -114,17 +114,17 @@ flow.df.full.explore = flow.df.full %>%
 
 # try exporting as matlab data file, with datetime and Q, for signature functions
 
-tryCatch({
-  # Uniquely named
-  writeMat("C:/Users/holta/Documents/matdata_test_2.mat", datetime = as.matrix(flow.df.full$datetime),
-           Q = as.matrix(flow.df.full$Q.mm.day))
-}, error = function(ex) {
-  cat("ERROR:", ex$message, "\n")
-})
+# tryCatch({
+#   # Uniquely named
+#   writeMat("C:/Users/holta/Documents/matdata_test_2.mat", datetime = as.matrix(flow.df.full$datetime),
+#            Q = as.matrix(flow.df.full$Q.mm.day))
+# }, error = function(ex) {
+#   cat("ERROR:", ex$message, "\n")
+# })
 
 
 
-# gap analysis
+#### GAP ANALYSIS ####
 
 # idea from Trent...
 # every year, count number of NAs in flow timeseries
