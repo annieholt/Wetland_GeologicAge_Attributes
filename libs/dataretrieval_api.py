@@ -264,23 +264,25 @@ def usgs_drain_area_download_api(siteid):
     return drain_area_mm2
 
 # should function return matlab file format instead??
-def usgs_daily_prep(flow_cfs_df, drain_area):
+def usgs_daily_prep(siteid, flow_cfs_df, drain_area, out_dir, save=False):
     """
     Function to prep USGS daily flow data for the TOSSH Toolbox. units are converted to mm/day, time series is filled
     out with NaNs, negative flow values are converted to NaN, date ranges are finalized.
+    :param siteid: site identifier, 8 digits long, as string
     :param flow_cfs_df: dataframe of downloaded USGS flow data (columns 'date', 'qualifiers', 'q_daily_cfs')
     :param drain_area: value of drainage area for the site, in square milimeters
+    :param out_dir: location to save dataset
     :return: dataframe of USGS discharge data, including flow values, dates, and qualifiers
     """
 
     flow_df = flow_cfs_df
     # Filtering data within the date range
     # making sure flow values are numeric format
-    flow_df = flow_df[(flow_df['date'] >= '1989-10-01') & (flow_df['date'] <= '2009-09-30')]
+    # flow_df = flow_df[(flow_df['date'] >= '1989-10-01') & (flow_df['date'] <= '2009-09-30')]
     flow_df['q_daily_cfs'] = pandas.to_numeric(flow_df['q_daily_cfs'], errors='coerce')
 
     # Calculating flow in mm/day, required for TOSSH
-    flow_df['q_daily_mm_day'] = flow_df['q_daily_cfs'] * 60 * 60 * 24 * (1 / 3.28084) ** 3 * (1000 ** 3) * (
+    flow_df['q_mm_day'] = flow_df['q_daily_cfs'] * 60 * 60 * 24 * (1 / 3.28084) ** 3 * (1000 ** 3) * (
                 1 / drain_area)
 
     # Filling gaps with NaNs
@@ -300,7 +302,7 @@ def usgs_daily_prep(flow_cfs_df, drain_area):
 
     # Convert the start and end dates back to the desired format ('%Y-%m-%d')
     start_date_str = start_date_final.strftime('%Y-%m-%d')
-    end_date_str = end_date.strftime('%Y-%m-%d')
+    end_date_str = end_date_final.strftime('%Y-%m-%d')
 
     date_range = pandas.date_range(start_date_str, end_date_str)
     print(date_range)
@@ -313,12 +315,30 @@ def usgs_daily_prep(flow_cfs_df, drain_area):
     # print(flow_df_full)
 
     # Replace negative Q.mm.day values with 0
-    flow_df_full['q_daily_mm_day'] = numpy.where(flow_df_full['q_daily_mm_day'] < 0, 0, flow_df_full['q_daily_mm_day'])
+    flow_df_full['q_mm_day'] = numpy.where(flow_df_full['q_mm_day'] < 0, 0, flow_df_full['q_mm_day'])
 
     # Format datetime
     flow_df_full['datetime'] = flow_df_full['date'].dt.strftime('%d-%b-%Y')
 
-    return flow_df_full
+    # final columns for the export
+    final_columns = ['datetime', 'q_mm_day', 'qualifiers']
+
+    # Create a new DataFrame with only the specific columns
+    flow_df_final = flow_df_full[final_columns]
+
+    if save:
+        # create output file path
+        file_name = siteid + ".csv"
+
+        # create full file path
+        file_path = os.path.join(out_dir, file_name)
+        # save the GeoDataFrame as csv
+        flow_df_final.to_csv(file_path, index=False)
+        print(f"Downloaded data and saved as {file_path}")
+    else:
+        print("Dataframe not saved.")
+
+    return flow_df_final
 
 
 # testing functions, on one USGS site
@@ -329,21 +349,26 @@ test_df = usgs_daily_download_api(siteid="02322800",
                                   out_dir="C:/Users/holta/Documents/ArcGIS_Projects/wetland_metrics/Data", save=False)
 # print(test_df)
 
-test_df_prepped = usgs_daily_prep(test_df, test_out)
-# print(test_df_prepped)
+test_df_prepped = usgs_daily_prep(siteid="02322800", drain_area=test_out, flow_cfs_df=test_df,
+                                  out_dir="C:/Users/holta/Documents", save=True)
 
-
-# Convert the DataFrame to a dictionary
-# Create a dictionary with each column as a separate array
-# Create a dictionary with keys 'datetime' and 'Q'
-matlab_dict = {
-    'datetime': test_df_prepped['date'].values.tolist(),
-    'Q': test_df_prepped['q_daily_mm_day'].values.tolist()
-}
-# Save the dictionary to a MATLAB .mat file
-scipy.io.savemat('C:/Users/holta/Documents/matdata_test_3.mat', matlab_dict)
+# # Create a matrix of dates
+# date_matrix = numpy.array(test_df_prepped['datetime']).reshape(len(test_df_prepped), 1)
+# flow_matrix = numpy.array(test_df_prepped['q_daily_cfs']).reshape(len(test_df_prepped), 1)
+#
+# # Convert the DataFrame to a dictionary
+# # Create a dictionary with each column as a separate array
+# # Create a dictionary with keys 'datetime' and 'Q'
+# matlab_dict = {
+#     'datetime': date_matrix,
+#     'Q': flow_matrix
+# }
+# # Save the dictionary to a MATLAB .mat file
+# scipy.io.savemat('C:/Users/holta/Documents/matdata_test_3.mat', matlab_dict)
 
 
 # Eventually, want to run workflow to take in all camels watershed boundaries
 # and workflow to take in site ids of reference gages from GagesII dataset (not including camel watersheds)
 # how to do this? note that hru_id is in the camels dataset, but have to add a leading zero to some of the strings
+
+
