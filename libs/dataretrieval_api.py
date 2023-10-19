@@ -99,6 +99,7 @@ def nwi_download_api(shed_gdf, out_dir, save=False):
     # loop through the object IDs in chunks
     for i in range(0, len(objectid_list), size):
         subset = objectid_list[i:i + size]
+        print(subset)
 
         # convert to string, with commas separating
         ids_string = [str(item) for item in subset]
@@ -130,6 +131,7 @@ def nwi_download_api(shed_gdf, out_dir, save=False):
             response_2.raise_for_status()  # Raise an exception for HTTP errors
             # parse the GeoJSON response
             geojson_data_2 = response_2.json()
+            print(geojson_data_2)
 
             # Convert the GeoJSON data to a GeoDataFrame and specify CRS (EPSG:3857)
             geometries = [shape(feature["geometry"]) for feature in geojson_data_2["features"]]
@@ -165,9 +167,10 @@ def nwi_download_api(shed_gdf, out_dir, save=False):
 
 
 # # testing function
-# test_shed_gdf = geopandas.read_file("C:/Users/holta/Documents/ArcGIS_Projects/wetland_metrics/Data/camels_test_basin_3.shp")
-# test_nwi_out = nwi_download_api(shed_gdf=test_shed_gdf,
-#                                 out_dir="C:/Users/holta/Documents/ArcGIS_Projects/wetland_metrics/Data", save=True)
+test_shed_gdf = geopandas.read_file("C:/Users/holta/Documents/ArcGIS_Projects/wetland_metrics/Data/camels_test_basin_3.shp")
+test_nwi_out = nwi_download_api(shed_gdf=test_shed_gdf,
+                                out_dir="C:/Users/holta/Documents/ArcGIS_Projects/wetland_metrics/Data", save=False)
+print(test_nwi_out)
 #
 # test_out_2 = test_nwi_out.overlay(test_shed_gdf, how='intersection')
 # print(test_out_2)
