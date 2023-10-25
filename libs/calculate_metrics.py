@@ -14,20 +14,19 @@ def calc_area(input_gdf):
     """
     try:
         # Reproject to Albers Equal Area Projection (EPSG:5070)
-        poly_gdf_alb = input_gdf.to_crs(epsg=5070)
+        gdf_alb = input_gdf.to_crs(epsg=5070)
     except Exception as e:
         print(e)
         return None
 
     # Filter for valid polygon and multipolygon geometries
     valid_types = ['Polygon', 'MultiPolygon']
-    poly_gdf_2 = poly_gdf_alb[poly_gdf_alb['geometry'].geom_type.isin(valid_types)]
+    gdf_area = gdf_alb[gdf_alb['geometry'].geom_type.isin(valid_types)]
 
-    # Check if there are any valid geometries
-    if not poly_gdf_2.empty:
+    if not gdf_area.empty:
         # Calculate area in square kilometers
-        poly_gdf_2["area_km2"] = poly_gdf_alb['geometry'].area / 10 ** 6
-        return poly_gdf_2
+        gdf_area["area_km2"] = gdf_area['geometry'].area / 10 ** 6
+        return gdf_area
     else:
         print("No Polygon Type Geometry.")
         return None
@@ -67,50 +66,53 @@ def wetlands_in_shed(nwi_gdf, shed_gdf):
 
 def prep_nwi(nwi_gdf):
     """
-    :param nwi_gdf: GeoDataFrame of NWI data, should be polygon geometry.
+    Function to create wetland categories based on wetland type, which can be used to summarize wetlands in catchments.
+    :param nwi_gdf: GeoDataFrame of NWI data, should be polygon geometry. columns are 'attribute', 'wet_type', 'area_km2'
     :return: GeoDataFrame of NWI wetlands with updated attribute information.
     """
-    # Make all column names lowercase
+    # Make sure all column names lowercase
     nwi_gdf.columns = nwi_gdf.columns.str.lower()
 
     # Retain columns of interest
-    nwi_filtered = nwi_gdf[['attribute', 'wetland_ty', 'acres', 'shape_area', 'geometry']].copy()
+    # nwi_filtered = nwi_gdf[['attribute', 'wetland_ty', 'area_km2', 'geometry']].copy()
 
     # Add a new column with just the leading ATTRIBUTE letter for simplification
-    nwi_filtered['system'] = nwi_filtered['attribute'].str[:1]
+    nwi_gdf['system'] = nwi_gdf['attribute'].str[:1]
 
     # Print out the unique attribute letters for checking purposes
-    filter_results = nwi_filtered['system'].unique()
+    filter_results = nwi_gdf['system'].unique()
     print(filter_results)
 
     # Adding columns based on wetland type
     type_conditions = [
-        (nwi_filtered['wetland_ty'] == 'Estuarine and Marine Wetland'),
-        (nwi_filtered['wetland_ty'] == 'Estuarine and Marine Deepwater'),
-        (nwi_filtered['wetland_ty'] == 'Freshwater Emergent Wetland'),
-        (nwi_filtered['wetland_ty'] == 'Freshwater Forested/Shrub Wetland'),
-        (nwi_filtered['wetland_ty'] == 'Freshwater Pond'),
-        (nwi_filtered['wetland_ty'] == 'Lake'),
-        (nwi_filtered['wetland_ty'] == 'Riverine'),
-        (nwi_filtered['wetland_ty'] == 'Other')
+        (nwi_gdf['wet_type'] == 'Estuarine and Marine Wetland'),
+        (nwi_gdf['wet_type'] == 'Estuarine and Marine Deepwater'),
+        (nwi_gdf['wet_type'] == 'Freshwater Emergent Wetland'),
+        (nwi_gdf['wet_type'] == 'Freshwater Forested/Shrub Wetland'),
+        (nwi_gdf['wet_type'] == 'Freshwater Pond'),
+        (nwi_gdf['wet_type'] == 'Lake'),
+        (nwi_gdf['wet_type'] == 'Riverine'),
+        (nwi_gdf['wet_type'] == 'Other')
     ]
 
     type_results = ['est', 'est', 'fresh', 'fresh', 'fresh', 'lake', 'other', 'other']
 
     # Create a new column based on conditions
-    nwi_filtered['wet_class'] = numpy.select(type_conditions, type_results)
+    nwi_gdf['wet_class'] = numpy.select(type_conditions, type_results)
+    print(nwi_gdf)
 
     # Print out the unique wetland class values for checking purposes
-    class_results = nwi_filtered['wet_class'].unique()
+    class_results = nwi_gdf['wet_class'].unique()
     print(class_results)
 
-    return nwi_filtered
+    return nwi_gdf
 
 # NWI/watershed spatial operation
 # Joining NWI wetlands to watershed(s) of interest.
 # Then summarizing, generating various wetland metrics (wetland area, area fraction, etc.)
 def calc_wetland_metrics(nwi_gdf, shed_gdf):
     """
+    Function to summarize wetland characteristics in a given catchment, based on wetland types and coverage areas.
     :param nwi_gdf: GeoDataFrame of NWI data, should be polygon geometry.
     Should have km2 area calculated as well as 'System' column (results from nwi_prep function).
     :param shed_gdf: shed_gdf: GeoDataFrame of Watershed(s), should be polygon geometry. Should also have km2 area calculated.
