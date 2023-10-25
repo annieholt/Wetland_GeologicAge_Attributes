@@ -37,7 +37,7 @@ def nwi_download_api(shed_gdf, out_dir, save=False):
     # if not desired CRS, convert to EPSG:4269
     if check_crs != target_crs:
         # Convert the GeoDataFrame to EPSG:4269
-        shed_gdf = shed_gdf.to_crs(epsg=4269)
+        shed_gdf = shed_gdf.to_crs(4269)
     else:
         print("CRS is already EPSG:4269.")
 
@@ -61,7 +61,7 @@ def nwi_download_api(shed_gdf, out_dir, save=False):
         "spatialRel": "esriSpatialRelIntersects",
         "where": "1=1",  # Retrieve all features (modify as needed)
         "inSR": "4269",  # input spatial reference
-        "outFields": "WETLAND_TYPE,ATTRIBUTE",  # specify fields of interest
+        # "outFields": "WETLAND_TYPE,ATTRIBUTE",  # specify fields of interest
         "returnIdsOnly": "true",
         # "outFields": "*",  # retrieve all fields
     }
@@ -114,7 +114,7 @@ def nwi_download_api(shed_gdf, out_dir, save=False):
             # "spatialRel": "esriSpatialRelIntersects",
             "where": "1=1",  # Retrieve all features (modify as needed)
             # "inSR": "4269",  # input spatial reference
-            "outFields": "WETLAND_TYPE,ATTRIBUTE",  # specify fields of interest
+            "outFields": "Wetlands.WETLAND_TYPE,Wetlands.ATTRIBUTE",  # specify fields of interest; somehow these changed??
             # "returnIdsOnly": "true",
             "objectIds": ids_final,
             # "outFields": "*",  # retrieve all fields
@@ -131,15 +131,23 @@ def nwi_download_api(shed_gdf, out_dir, save=False):
             response_2.raise_for_status()  # Raise an exception for HTTP errors
             # parse the GeoJSON response
             geojson_data_2 = response_2.json()
-            print(geojson_data_2)
+            # print(geojson_data_2)
 
             # Convert the GeoJSON data to a GeoDataFrame and specify CRS (EPSG:3857)
             geometries = [shape(feature["geometry"]) for feature in geojson_data_2["features"]]
             nwi_gdf = geopandas.GeoDataFrame(geojson_data_2["features"], geometry=geometries, crs=from_epsg(4326))
 
             # create new columns for the different fields, which is separating out the info in 'properties' field
-            nwi_gdf["wet_type"] = [dict.get("WETLAND_TYPE") for dict in nwi_gdf["properties"]]
-            nwi_gdf["attribute"] = [dict.get("ATTRIBUTE") for dict in nwi_gdf["properties"]]
+            # had to update the field names, leaving old version below for now
+
+            # nwi_gdf["wet_type"] = [dict.get("WETLAND_TYPE") for dict in nwi_gdf["properties"]]
+            # nwi_gdf["attribute"] = [dict.get("ATTRIBUTE") for dict in nwi_gdf["properties"]]
+
+            nwi_gdf["attribute"] = [dict.get("Wetlands.ATTRIBUTE") for dict in nwi_gdf["properties"]]
+            nwi_gdf["wet_type"] = [dict.get("Wetlands.WETLAND_TYPE") for dict in nwi_gdf["properties"]]
+
+            # drop columns to reduce dataset size
+            nwi_gdf = nwi_gdf.drop(columns=['type', 'properties'])
 
             # aggregate the current results with the final dataset
             nwi_gdf_all = geopandas.GeoDataFrame(pandas.concat([nwi_gdf_all, nwi_gdf], ignore_index=True))
@@ -150,7 +158,8 @@ def nwi_download_api(shed_gdf, out_dir, save=False):
             print(f"An error occurred: {e}")
 
     # convert to nad 83 coordinates
-    nwi_gdf_final = nwi_gdf_all.to_crs(epsg=4269)
+    nwi_gdf_final = nwi_gdf_all.to_crs(4269)
+    print(nwi_gdf_final)
 
     if save:
         # output path for data
