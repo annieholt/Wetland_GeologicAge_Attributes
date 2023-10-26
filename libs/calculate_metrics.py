@@ -32,6 +32,12 @@ def calc_area(input_gdf):
         return None
 
 
+
+test_nwi = geopandas.read_file("C:/Users/holta/Documents/ArcGIS_Projects/wetland_metrics/Data/nwi_wetlands.shp")
+
+test_area = calc_area(test_nwi)
+print(test_area)
+
 # retain only wetland polygons in provided watershed polygon(s)
 # this is optional in the workflow, but allows for additional NWI data reduction
 # for example, if downloaded California NWI data but only needed wetlands for 8 specified California watersheds
