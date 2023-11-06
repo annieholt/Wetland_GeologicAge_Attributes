@@ -178,7 +178,7 @@ def nwi_download_api(shed_gdf, out_dir, save=False):
 # # testing function
 test_shed_gdf = geopandas.read_file("C:/Users/holta/Documents/ArcGIS_Projects/wetland_metrics/Data/camels_test_basin_3.shp")
 test_nwi_out = nwi_download_api(shed_gdf=test_shed_gdf,
-                                out_dir="C:/Users/holta/Documents/ArcGIS_Projects/wetland_metrics/Data", save=False)
+                                out_dir="C:/Users/holta/Documents/ArcGIS_Projects/wetland_metrics/Data", save=True)
 print(test_nwi_out)
 #
 # test_out_2 = test_nwi_out.overlay(test_shed_gdf, how='intersection')
