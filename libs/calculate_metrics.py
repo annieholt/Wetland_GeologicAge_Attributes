@@ -7,7 +7,7 @@ import geopandas, pandas, numpy
 # Calculate the total area of each polygon feature (reproject to equals area projection and calculate)
 # Can be applied to wetland and watershed shapefiles
 
-def calc_area(input_gdf):
+def calc_area_nwi(input_gdf):
     """
     :param input_gdf: Input GeoDataFrame. Should be polygon geometry type.
     :return: a GeoDataFrame.
@@ -31,22 +31,41 @@ def calc_area(input_gdf):
         print("No Polygon Type Geometry.")
         return None
 
+def calc_area_shed(input_gdf):
+    """
+    :param input_gdf: Input GeoDataFrame. Should be polygon geometry type.
+    :return: a GeoDataFrame.
+    """
+    try:
+        # Reproject to Albers Equal Area Projection (EPSG:5070)
+        gdf_alb = input_gdf.to_crs(epsg=5070)
+    except Exception as e:
+        print(e)
+        return None
 
+    # Filter for valid polygon and multipolygon geometries
+    valid_types = ['Polygon', 'MultiPolygon']
+    gdf_area = gdf_alb[gdf_alb['geometry'].geom_type.isin(valid_types)]
 
-test_nwi = geopandas.read_file("C:/Users/holta/Documents/ArcGIS_Projects/wetland_metrics/Data/nwi_wetlands.shp")
+    if not gdf_area.empty:
+        # Calculate area in square kilometers
+        gdf_area["shed_area_km2"] = gdf_area['geometry'].area / 10 ** 6
+        return gdf_area
+    else:
+        print("No Polygon Type Geometry.")
+        return None
 
-test_area = calc_area(test_nwi)
-print(test_area)
 
 # retain only wetland polygons in provided watershed polygon(s)
 # this is optional in the workflow, but allows for additional NWI data reduction
 # for example, if downloaded California NWI data but only needed wetlands for 8 specified California watersheds
-
 def wetlands_in_shed(nwi_gdf, shed_gdf):
     """
+    Function to retain only the wetland polygons with in the provided watershed polygon and join the wetland
+    and watershed shapefile attributes.
     :param nwi_gdf: GeoDataFrame of NWI data, should be polygon geometry.
     :param shed_gdf: GeoDataFrame of Watershed(s), should be polygon geometry.
-    :return: GeoDataFrame of NWI wetlands in provided watersheds.
+    :return: GeoDataFrame of NWI wetlands in provided watersheds, with joined attributes from both input datasets.
     """
     try:
         # Reproject both GeoDataFrames to Albers Equal Area (EPSG:5070)
@@ -84,10 +103,9 @@ def prep_nwi(nwi_gdf):
 
     # Add a new column with just the leading ATTRIBUTE letter for simplification
     nwi_gdf['system'] = nwi_gdf['attribute'].str[:1]
-
-    # Print out the unique attribute letters for checking purposes
-    filter_results = nwi_gdf['system'].unique()
-    print(filter_results)
+    # # Print out the unique attribute letters for checking purposes
+    # filter_results = nwi_gdf['system'].unique()
+    # print(filter_results)
 
     # Adding columns based on wetland type
     type_conditions = [
@@ -100,16 +118,17 @@ def prep_nwi(nwi_gdf):
         (nwi_gdf['wet_type'] == 'Riverine'),
         (nwi_gdf['wet_type'] == 'Other')
     ]
-
+    # using on above type conditions, sort into more general wetland class categories
+    # based on methods in Gnann et al., 2021
     type_results = ['est', 'est', 'fresh', 'fresh', 'fresh', 'lake', 'other', 'other']
 
-    # Create a new column based on conditions
+    # Create a new column based on above assignments
     nwi_gdf['wet_class'] = numpy.select(type_conditions, type_results)
-    print(nwi_gdf)
+    # print(nwi_gdf)
 
-    # Print out the unique wetland class values for checking purposes
-    class_results = nwi_gdf['wet_class'].unique()
-    print(class_results)
+    # # Print out the unique wetland class values for checking purposes
+    # class_results = nwi_gdf['wet_class'].unique()
+    # print(class_results)
 
     return nwi_gdf
 
@@ -121,36 +140,44 @@ def calc_wetland_metrics(nwi_gdf, shed_gdf):
     Function to summarize wetland characteristics in a given catchment, based on wetland types and coverage areas.
     :param nwi_gdf: GeoDataFrame of NWI data, should be polygon geometry.
     Should have km2 area calculated as well as 'System' column (results from nwi_prep function).
-    :param shed_gdf: shed_gdf: GeoDataFrame of Watershed(s), should be polygon geometry. Should also have km2 area calculated.
+    :param shed_gdf: GeoDataFrame of watershed, should be a polygon geometry. Includes 'gauge_id' column.
     :return: GeoDataFrame of wetland summary info for watersheds.
     """
     # Check if all necessary columns exist
-    required_columns = {'area_km2', 'system'}
-    if not required_columns.issubset(nwi_gdf.columns) or 'area_km2' not in shed_gdf.columns:
+    required_columns = {'gauge_id', 'area_km2', 'system', 'wet_type', 'shed_area_km2'}
+    if not required_columns.issubset(nwi_gdf.columns):
         print("Required columns are missing.")
         return None
 
-    # Rename area_km2 of watershed to distinguish it from wetland areas
-    shed_gdf.rename(columns={'area_km2': 'shed_area_km2'}, inplace=True)
+    # if not required_columns.issubset(nwi_gdf.columns) or 'area_km2' not in shed_gdf.columns:
+    #     print("Required columns are missing.")
+    #     return None
+    #
+    # # Rename area_km2 of watershed to distinguish it from wetland areas
+    # shed_gdf.rename(columns={'area_km2': 'shed_area_km2'}, inplace=True)
+    #
+    # # Perform a left spatial join of NWI wetlands to the watershed(s) GeoDataFrame
+    # nwi_shed = geopandas.sjoin(shed_gdf, nwi_gdf, how="left")
 
-    # Perform a left spatial join of NWI wetlands to the watershed(s) GeoDataFrame
-    nwi_shed = geopandas.sjoin(shed_gdf, nwi_gdf, how="left")
-
-    # Fill NaN values explicitly for missing data
-    nwi_shed['system'].fillna('None', inplace=True)
-    nwi_shed['wet_class'].fillna('None', inplace=True)
-    nwi_shed['area_km2'].fillna(0, inplace=True)
+    # Fill NaN values explicitly for missing data (may remove this step??)
+    nwi_gdf['system'].fillna('None', inplace=True)
+    nwi_gdf['wet_class'].fillna('None', inplace=True)
+    nwi_gdf['area_km2'].fillna(0, inplace=True)
 
     # Group by each watershed and wetland class and summarize the total area
-    shed_sum = nwi_shed.groupby(['hru_id', 'wet_class', 'shed_area_km2'])['area_km2'].sum().reset_index()
+    shed_sum = nwi_gdf.groupby(['gauge_id', 'wet_class', 'shed_area_km2'])['area_km2'].sum().reset_index()
 
     # Calculate the area fraction
     shed_sum['area_frac'] = shed_sum['area_km2'] / shed_sum['shed_area_km2']
+    print(shed_sum)
 
     # Pivot the data for easier visualization, one row per hru_id, one column per wetland class
-    shed_sum_pivot = shed_sum.pivot(index=['hru_id', 'shed_area_km2'], columns='wet_class', values='area_frac')
+    # shed_sum_pivot = shed_sum.pivot(index=['gauge_id'], columns='wet_class', values='area_frac')
+    shed_sum_pivot = shed_sum.pivot(index=['gauge_id'], columns='wet_class', values='area_frac')
+    shed_final = shed_sum_pivot.reset_index()
+    print(shed_final)
 
-    # Merge the summary data back to the watershed shapefile
-    shed_final = shed_gdf.merge(shed_sum_pivot, on=['hru_id', 'shed_area_km2'])
+    # Merge the summary data back to the watershed shapefile so the output is geodataset
+    shed_final = shed_gdf.merge(shed_sum_pivot, on=['gauge_id'])
 
     return shed_final
