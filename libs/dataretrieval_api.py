@@ -22,7 +22,7 @@ import scipy.io
 def nwi_download_api(shed_gdf, out_dir, save=False):
     """
     Function to query NWI data from the ArcGIS Rest API service layer using a watershed bounding area.
-    :param shed_gdf: watershed polygon geodataframe
+    :param shed_gdf: watershed polygon geodataframe. should have 'gauge_id' attribute.
     :param out_dir: location to save resulting wetland dataset
     :param save: if save is True, save output
     :return: geodataframe of wetlands
@@ -31,13 +31,14 @@ def nwi_download_api(shed_gdf, out_dir, save=False):
     service_url = "https://fwspublicservices.wim.usgs.gov/wetlandsmapservice/rest/services/Wetlands/MapServer/0"
 
     # ensure input watershed shapefile is desired coordinate system (NAD83)
-    check_crs = shed_gdf.crs
+    check_crs = shed_gdf.crs.to_string()
     target_crs = 'EPSG:4269'
 
     # if not desired CRS, convert to EPSG:4269
     if check_crs != target_crs:
         # Convert the GeoDataFrame to EPSG:4269
         shed_gdf = shed_gdf.to_crs(4269)
+        print(shed_gdf)
     else:
         print("CRS is already EPSG:4269.")
 
@@ -99,7 +100,7 @@ def nwi_download_api(shed_gdf, out_dir, save=False):
     # loop through the object IDs in chunks
     for i in range(0, len(objectid_list), size):
         subset = objectid_list[i:i + size]
-        print(subset)
+        # print(subset)
 
         # convert to string, with commas separating
         ids_string = [str(item) for item in subset]
@@ -159,11 +160,14 @@ def nwi_download_api(shed_gdf, out_dir, save=False):
 
     # convert to nad 83 coordinates
     nwi_gdf_final = nwi_gdf_all.to_crs(4269)
-    print(nwi_gdf_final)
+    # print(nwi_gdf_final)
 
     if save:
+        # getting watershed id
+        gauge_id = shed_gdf['gauge_id'].iloc[0]
         # output path for data
-        file_name = 'nwi_wetlands.shp'
+        file_name = gauge_id + '_nwi_wetlands.shp'
+        # print(file_name)
         # create pull file path
         file_path = os.path.join(out_dir, file_name)
         # save the GeoDataFrame as a shapefile
@@ -176,10 +180,15 @@ def nwi_download_api(shed_gdf, out_dir, save=False):
 
 
 # # testing function
-test_shed_gdf = geopandas.read_file("C:/Users/holta/Documents/ArcGIS_Projects/wetland_metrics/Data/camels_test_basin_3.shp")
-test_nwi_out = nwi_download_api(shed_gdf=test_shed_gdf,
-                                out_dir="C:/Users/holta/Documents/ArcGIS_Projects/wetland_metrics/Data", save=True)
-print(test_nwi_out)
+# test_shed_gdf = geopandas.read_file("C:/Users/holta/Documents/ArcGIS_Projects/wetland_metrics/Data/camels_test_basin_2.shp")
+# # removing unneeded attribute data for now
+# test_shed_2 = test_shed_gdf.loc[:, ['hru_id', 'geometry']]
+# test_shed_2 = test_shed_2.rename(columns={'hru_id': 'gauge_id'})
+# test_shed_2['gauge_id'] = test_shed_2['gauge_id'].astype(str).str.zfill(8)
+#
+# test_nwi_out = nwi_download_api(shed_gdf=test_shed_2,
+#                                 out_dir="C:/Users/holta/Documents/ArcGIS_Projects/wetland_metrics/Data", save=True)
+# print(test_nwi_out)
 #
 # test_out_2 = test_nwi_out.overlay(test_shed_gdf, how='intersection')
 # print(test_out_2)
