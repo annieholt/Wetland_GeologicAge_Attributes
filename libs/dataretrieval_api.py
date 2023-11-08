@@ -38,7 +38,7 @@ def nwi_download_api(shed_gdf, out_dir, save=False):
     if check_crs != target_crs:
         # Convert the GeoDataFrame to EPSG:4269
         shed_gdf = shed_gdf.to_crs(4269)
-        print(shed_gdf)
+        # print(shed_gdf)
     else:
         print("CRS is already EPSG:4269.")
 
@@ -72,6 +72,7 @@ def nwi_download_api(shed_gdf, out_dir, save=False):
     # try sending the request, else return error information
     # code modified from ChatGPT-generated code
     # first sending request for Object IDs
+
     try:
         # send the API request
         response = requests.get(api_url, params=query_params)
@@ -79,54 +80,47 @@ def nwi_download_api(shed_gdf, out_dir, save=False):
         # parse the GeoJSON response
         geojson_data = response.json()
 
-        # save the object IDs into list
+        # save the object IDs into the list
         objectid_list = geojson_data['objectIds']
         # print(objectid_list)
 
-    except requests.exceptions.RequestException as e:
-        print(f"Request error: {e}")
-    except Exception as e:
-        print(f"An error occurred: {e}")
+        # now run second request
+        # this request is now for returning the featureids,
+        # looping through objectids (just doing 99 at a time, the limit)
 
-    # now run second request
-    # this request is now for returning the featureids, looping through objectids (just doing 999 at a time, the limit)
+        # define the request size
+        # actually trying smaller request, seems to also be a limit on length of request url
+        size = 99
+        # create empty geodataframe to store the final dataset
+        nwi_gdf_all = geopandas.GeoDataFrame()
 
-    # define the request size
-    # actually trying smaller request, seems to also be a limit on length of request url
-    size = 99
-    # create empty geodataframe to store the final dataset
-    nwi_gdf_all = geopandas.GeoDataFrame()
+        # loop through the object IDs in chunks
+        for i in range(0, len(objectid_list), size):
+            subset = objectid_list[i:i + size]
+            # print(subset)
 
-    # loop through the object IDs in chunks
-    for i in range(0, len(objectid_list), size):
-        subset = objectid_list[i:i + size]
-        # print(subset)
+            # convert to string, with commas separating
+            ids_string = [str(item) for item in subset]
+            ids_final = ', '.join(ids_string)
 
-        # convert to string, with commas separating
-        ids_string = [str(item) for item in subset]
-        ids_final = ', '.join(ids_string)
+            # try sending the second request, else return error information
+            # fill out query parameters, for NWI wetland map service
+            query_params_2 = {
+                "f": "geojson",  # GeoJSON format for the response
+                # "geometry": bbox,  # bounding box
+                # "geometryType": "esriGeometryEnvelope",
+                # "spatialRel": "esriSpatialRelIntersects",
+                "where": "1=1",  # Retrieve all features (modify as needed)
+                # "inSR": "4269",  # input spatial reference
+                "outFields": "Wetlands.WETLAND_TYPE,Wetlands.ATTRIBUTE",
+                # specify fields of interest; somehow these changed??
+                # "returnIdsOnly": "true",
+                "objectIds": ids_final,
+                # "outFields": "*",  # retrieve all fields
+            }
+            # create the API request URL
+            api_url_2 = f"{service_url}/query"
 
-        # try sending the second request, else return error information
-        # fill out query parameters, for NWI wetland map service
-        query_params_2 = {
-            "f": "geojson",  # GeoJSON format for the response
-            # "geometry": bbox,  # bounding box
-            # "geometryType": "esriGeometryEnvelope",
-            # "spatialRel": "esriSpatialRelIntersects",
-            "where": "1=1",  # Retrieve all features (modify as needed)
-            # "inSR": "4269",  # input spatial reference
-            "outFields": "Wetlands.WETLAND_TYPE,Wetlands.ATTRIBUTE",  # specify fields of interest; somehow these changed??
-            # "returnIdsOnly": "true",
-            "objectIds": ids_final,
-            # "outFields": "*",  # retrieve all fields
-        }
-        # create the API request URL
-        api_url_2 = f"{service_url}/query"
-
-        # try sending the request, else return error information
-        # code modified from ChatGPT-generated code
-        # first sending request for Object IDs
-        try:
             # send the API request
             response_2 = requests.get(api_url_2, params=query_params_2)
             response_2.raise_for_status()  # Raise an exception for HTTP errors
@@ -153,28 +147,32 @@ def nwi_download_api(shed_gdf, out_dir, save=False):
             # aggregate the current results with the final dataset
             nwi_gdf_all = geopandas.GeoDataFrame(pandas.concat([nwi_gdf_all, nwi_gdf], ignore_index=True))
 
-        except requests.exceptions.RequestException as e:
-            print(f"Request error: {e}")
-        except Exception as e:
-            print(f"An error occurred: {e}")
+        # convert to nad 83 coordinates
+        nwi_gdf_final = nwi_gdf_all.to_crs(4269)
+        # print(nwi_gdf_final)
 
-    # convert to nad 83 coordinates
-    nwi_gdf_final = nwi_gdf_all.to_crs(4269)
-    # print(nwi_gdf_final)
+        if save:
+            # getting watershed id
+            gauge_id = shed_gdf['gauge_id'].iloc[0]
+            # output path for data
+            file_name = gauge_id + '_nwi_wetlands.shp'
+            # print(file_name)
+            # create pull file path
+            file_path = os.path.join(out_dir, file_name)
+            # save the GeoDataFrame as a shapefile
+            nwi_gdf_final.to_file(file_path)
+            print(f"Downloaded data and saved as {file_path}")
+        else:
+            print("GeoDataFrame not saved.")
 
-    if save:
-        # getting watershed id
-        gauge_id = shed_gdf['gauge_id'].iloc[0]
-        # output path for data
-        file_name = gauge_id + '_nwi_wetlands.shp'
-        # print(file_name)
-        # create pull file path
-        file_path = os.path.join(out_dir, file_name)
-        # save the GeoDataFrame as a shapefile
-        nwi_gdf_final.to_file(file_path)
-        print(f"Downloaded data and saved as {file_path}")
-    else:
-        print("GeoDataFrame not saved.")
+    except requests.exceptions.RequestException as e:
+        print(f"Request error: {e}")
+        # empty geodataframe
+        return None
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        # empty geodataframe
+        return None
 
     return nwi_gdf_final
 
@@ -187,9 +185,9 @@ def nwi_download_api(shed_gdf, out_dir, save=False):
 # test_shed_2['gauge_id'] = test_shed_2['gauge_id'].astype(str).str.zfill(8)
 #
 # test_nwi_out = nwi_download_api(shed_gdf=test_shed_2,
-#                                 out_dir="C:/Users/holta/Documents/ArcGIS_Projects/wetland_metrics/Data", save=True)
+#                                 out_dir="E:/SDSU_GEOG/Thesis/Data/NWI_outputs/Shapefiles", save=True)
 # print(test_nwi_out)
-#
+
 # test_out_2 = test_nwi_out.overlay(test_shed_gdf, how='intersection')
 # print(test_out_2)
 
