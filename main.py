@@ -8,47 +8,97 @@ import libs.dataretrieval_api
 # importing module libraries
 from libs.dataretrieval_api import *
 from libs.calculate_metrics import *
+import multiprocessing
 
 
-def main():
-
-    # WETLAND WORKFLOW, camels watersheds
-    # iterate data retrieval and metrics calculation for each camels watershed
-
-    camels_sheds = geopandas.read_file('E:/SDSU_GEOG/Thesis/Data/CAMELS/basin_set_full_res/HCDN_nhru_final_671.shp')
-
-    # first, testing a smaller subset
-    camels_sheds_test = camels_sheds.head(10).copy()
-    # print(camels_sheds_test)
-
-    # Initialize an empty list to store the results
-    results = []
-
-    for index, row in camels_sheds_test.iterrows():
-        # create a geodataframe for current watershed
-        current_shed = geopandas.GeoDataFrame([row], geometry='geometry', crs=camels_sheds_test.crs)
-
-        # removing unneeded attribute data and making sure ID column has 8 values (leading zero sometimes)
-        shed_gdf = current_shed.loc[:, ['hru_id', 'geometry']]
-        shed_gdf = shed_gdf.rename(columns={'hru_id': 'gauge_id'})
-        shed_gdf['gauge_id'] = shed_gdf['gauge_id'].astype(str).str.zfill(8)
-
+def nwi_iter(shed_gdf):
+    try:
         # data retrieval
         nwi_gdf = nwi_download_api(shed_gdf=shed_gdf, out_dir="E:/SDSU_GEOG/Thesis/Data/NWI_outputs/Shapefiles",
-                                   save=True)
-
+                                   save=False)
         # metrics processing
         nwi_area = calc_area_nwi(nwi_gdf)
         shed_area = calc_area_shed(shed_gdf)
         nwi_shed_join = wetlands_in_shed(nwi_area, shed_area)
         nwi_prep = prep_nwi(nwi_shed_join)
         nwi_metrics = calc_wetland_metrics(nwi_prep, shed_area)
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return None
 
-        # add to results
-        results.append(nwi_metrics)
+    return nwi_metrics
 
-    result_gdf = pandas.concat(results, ignore_index=True)
-    print(result_gdf)
+def main():
+    # WETLAND WORKFLOW, camels watersheds
+    # iterate data retrieval and metrics calculation for each camels watershed
+
+    camels_sheds = geopandas.read_file('E:/SDSU_GEOG/Thesis/Data/CAMELS/basin_set_full_res/HCDN_nhru_final_671.shp')
+
+    camels_sheds_2 = camels_sheds.loc[:, ['hru_id', 'geometry']]
+    camels_sheds_2 = camels_sheds_2.rename(columns={'hru_id': 'gauge_id'})
+    camels_sheds_2['gauge_id'] = camels_sheds_2['gauge_id'].astype(str).str.zfill(8)
+
+    # first, testing a smaller subset
+    camels_sheds_test = camels_sheds_2.head(10).copy()
+    # print(camels_sheds_test)
+
+    # empty list for watershed data
+    camels_sheds_list = []
+
+    # Loop through each row in the original GeoDataFrame
+    for index, row in camels_sheds_test.iterrows():
+        # Create a new GeoDataFrame with a single row
+        single_row_gdf = camels_sheds_2.iloc[[index]]
+
+        # Append it to the list
+        camels_sheds_list.append(single_row_gdf)
+
+    # Initialize a multiprocessing Pool
+    with multiprocessing.Pool(processes=12) as pool:
+        # Run the function in parallel using the Pool for each input region
+        results = pool.map(nwi_iter, camels_sheds_list)
+        print(results)
+
+
+
+    # # WETLAND WORKFLOW, camels watersheds
+    # # iterate data retrieval and metrics calculation for each camels watershed
+    #
+    # camels_sheds = geopandas.read_file('E:/SDSU_GEOG/Thesis/Data/CAMELS/basin_set_full_res/HCDN_nhru_final_671.shp')
+    #
+    # # first, testing a smaller subset
+    # camels_sheds_test = camels_sheds.head(10).copy()
+    # # print(camels_sheds_test)
+    #
+    # # Initialize an empty list to store the results
+    # results = []
+    #
+    # for index, row in camels_sheds_test.iterrows():
+    #     # create a geodataframe for current watershed
+    #     current_shed = geopandas.GeoDataFrame([row], geometry='geometry', crs=camels_sheds_test.crs)
+    #
+    #     # removing unneeded attribute data and making sure ID column has 8 values (leading zero sometimes)
+    #     shed_gdf = current_shed.loc[:, ['hru_id', 'geometry']]
+    #     shed_gdf = shed_gdf.rename(columns={'hru_id': 'gauge_id'})
+    #     shed_gdf['gauge_id'] = shed_gdf['gauge_id'].astype(str).str.zfill(8)
+    #
+    #     # data retrieval
+    #     nwi_gdf = nwi_download_api(shed_gdf=shed_gdf, out_dir="E:/SDSU_GEOG/Thesis/Data/NWI_outputs/Shapefiles",
+    #                                save=True)
+    #
+    #     # metrics processing
+    #     nwi_area = calc_area_nwi(nwi_gdf)
+    #     shed_area = calc_area_shed(shed_gdf)
+    #     nwi_shed_join = wetlands_in_shed(nwi_area, shed_area)
+    #     nwi_prep = prep_nwi(nwi_shed_join)
+    #     nwi_metrics = calc_wetland_metrics(nwi_prep, shed_area)
+    #
+    #     # add to results
+    #     results.append(nwi_metrics)
+    #
+    # result_gdf = pandas.concat(results, ignore_index=True)
+    # result_gdf.to_file("E:/SDSU_GEOG/Thesis/Data/NWI_outputs/Shapefiles/metrics_test.shp")
+    # # print(result_gdf)
 
 
 
