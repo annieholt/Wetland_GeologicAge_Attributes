@@ -169,13 +169,13 @@ def calc_wetland_metrics(nwi_gdf, shed_gdf):
 
     # Calculate the area fraction
     shed_sum['area_frac'] = shed_sum['area_km2'] / shed_sum['shed_area_km2']
-    print(shed_sum)
+    # print(shed_sum)
 
     # Pivot the data for easier visualization, one row per hru_id, one column per wetland class
     # shed_sum_pivot = shed_sum.pivot(index=['gauge_id'], columns='wet_class', values='area_frac')
     shed_sum_pivot = shed_sum.pivot(index=['gauge_id'], columns='wet_class', values='area_frac')
     shed_final = shed_sum_pivot.reset_index()
-    print(shed_final)
+    # print(shed_final)
 
     # Merge the summary data back to the watershed shapefile so the output is geodataset
     shed_final = shed_gdf.merge(shed_sum_pivot, on=['gauge_id'])
