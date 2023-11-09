@@ -55,19 +55,37 @@ def nwi_download_api(shed_gdf, out_dir, save=False):
     print(bbox)
 
     # fill out query parameters, for NWI wetland map service
+    # Define the query parameters as a dictionary
+    # below is an updated version, kept previous version; not sure why this needed to change?
     query_params = {
-        "f": "geojson",  # GeoJSON format for the response
-        "geometry": bbox,  # bounding box
+        "where": "1=1",
+        "text": "",
+        "objectIds": "",
+        "time": "",
+        "geometry": bbox,
         "geometryType": "esriGeometryEnvelope",
+        "inSR": "4269",
         "spatialRel": "esriSpatialRelIntersects",
-        "where": "1=1",  # Retrieve all features (modify as needed)
-        "inSR": "4269",  # input spatial reference
-        # "outFields": "WETLAND_TYPE,ATTRIBUTE",  # specify fields of interest
+        "units": "esriSRUnit_Foot",
         "returnIdsOnly": "true",
-        # "outFields": "*",  # retrieve all fields
+        "f": "pjson"
     }
+
+    # query_params = {
+    #     "f": "geojson",  # GeoJSON format for the response
+    #     "geometry": bbox,  # bounding box
+    #     "geometryType": "esriGeometryEnvelope",
+    #     "spatialRel": "esriSpatialRelIntersects",
+    #     "where": "1=1",  # Retrieve all features (modify as needed)
+    #     "inSR": "4269",  # input spatial reference
+    #     # "outFields": "WETLAND_TYPE,ATTRIBUTE",  # specify fields of interest
+    #     "returnIdsOnly": "true",
+    #     # "outFields": "*",  # retrieve all fields
+    # }
+
     # create the API request URL
     api_url = f"{service_url}/query"
+    # print(api_url)
 
     # try sending the request, else return error information
     # code modified from ChatGPT-generated code
@@ -79,10 +97,11 @@ def nwi_download_api(shed_gdf, out_dir, save=False):
         response.raise_for_status()  # Raise an exception for HTTP errors
         # parse the GeoJSON response
         geojson_data = response.json()
+        print(geojson_data)
 
         # save the object IDs into the list
         objectid_list = geojson_data['objectIds']
-        # print(objectid_list)
+        print(objectid_list)
 
         # now run second request
         # this request is now for returning the featureids,
@@ -102,6 +121,7 @@ def nwi_download_api(shed_gdf, out_dir, save=False):
             # convert to string, with commas separating
             ids_string = [str(item) for item in subset]
             ids_final = ', '.join(ids_string)
+            print(ids_final)
 
             # try sending the second request, else return error information
             # fill out query parameters, for NWI wetland map service
@@ -126,7 +146,7 @@ def nwi_download_api(shed_gdf, out_dir, save=False):
             response_2.raise_for_status()  # Raise an exception for HTTP errors
             # parse the GeoJSON response
             geojson_data_2 = response_2.json()
-            # print(geojson_data_2)
+            print(geojson_data_2)
 
             # Convert the GeoJSON data to a GeoDataFrame and specify CRS (EPSG:3857)
             geometries = [shape(feature["geometry"]) for feature in geojson_data_2["features"]]
@@ -177,16 +197,16 @@ def nwi_download_api(shed_gdf, out_dir, save=False):
     return nwi_gdf_final
 
 
-# # testing function
-# test_shed_gdf = geopandas.read_file("C:/Users/holta/Documents/ArcGIS_Projects/wetland_metrics/Data/camels_test_basin_2.shp")
-# # removing unneeded attribute data for now
-# test_shed_2 = test_shed_gdf.loc[:, ['hru_id', 'geometry']]
-# test_shed_2 = test_shed_2.rename(columns={'hru_id': 'gauge_id'})
-# test_shed_2['gauge_id'] = test_shed_2['gauge_id'].astype(str).str.zfill(8)
-#
-# test_nwi_out = nwi_download_api(shed_gdf=test_shed_2,
-#                                 out_dir="E:/SDSU_GEOG/Thesis/Data/NWI_outputs/Shapefiles", save=True)
-# print(test_nwi_out)
+# testing function
+test_shed_gdf = geopandas.read_file("C:/Users/holta/Documents/ArcGIS_Projects/wetland_metrics/Data/camels_test_basin_2.shp")
+# removing unneeded attribute data for now
+test_shed_2 = test_shed_gdf.loc[:, ['hru_id', 'geometry']]
+test_shed_2 = test_shed_2.rename(columns={'hru_id': 'gauge_id'})
+test_shed_2['gauge_id'] = test_shed_2['gauge_id'].astype(str).str.zfill(8)
+
+test_nwi_out = nwi_download_api(shed_gdf=test_shed_2,
+                                out_dir="E:/SDSU_GEOG/Thesis/Data/NWI_outputs/Shapefiles", save=False)
+print(test_nwi_out)
 
 # test_out_2 = test_nwi_out.overlay(test_shed_gdf, how='intersection')
 # print(test_out_2)
