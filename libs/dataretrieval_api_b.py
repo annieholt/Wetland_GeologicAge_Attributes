@@ -19,6 +19,7 @@ def get_object_ids(api_url, query_params):
         response = requests.get(api_url, params=query_params)
         response.raise_for_status()
         geojson_data = response.json()
+        print(geojson_data)
         return geojson_data['objectIds']
     except requests.exceptions.RequestException as e:
         print("Request error:", e)
@@ -63,8 +64,11 @@ def get_wetland_data(api_url, query_params_2, objectid_list):
 
 if __name__ == "__main__":
     # Load test data
+    # test_shed_gdf = geopandas.read_file(
+    #     "C:/Users/holta/Documents/ArcGIS_Projects/wetland_metrics/Data/camels_test_basin_2.shp")
+
     test_shed_gdf = geopandas.read_file(
-        "C:/Users/holta/Documents/ArcGIS_Projects/wetland_metrics/Data/camels_test_basin_2.shp")
+        "C:/Users/aholt8450/Documents/Data/camels_test_basin.shp")
 
     # Preprocess test data
     # test_shed_2 = test_shed_gdf.loc[:, ['hru_id', 'geometry']].rename(columns={'hru_id': 'gauge_id'}).astype(
@@ -78,13 +82,15 @@ if __name__ == "__main__":
     # Set target CRS
     target_crs = 'EPSG:4269'
     shed_gdf = convert_to_epsg(test_shed_2, target_crs)
+    print(shed_gdf)
 
     # Define API URL and query parameters
     service_url = "https://fwspublicservices.wim.usgs.gov/wetlandsmapservice/rest/services/Wetlands/MapServer/0"
     bbox = ', '.join(map(str, shed_gdf.total_bounds.tolist()))
+    print(bbox)
     query_params = {"where": "1=1", "text": "", "objectIds": "", "time": "", "geometry": bbox,
                     "geometryType": "esriGeometryEnvelope", "inSR": "4269", "spatialRel": "esriSpatialRelIntersects",
-                    "units": "esriSRUnit_Foot", "returnIdsOnly": "true", "f": "geojson"}
+                    "units": "esriSRUnit_Foot", "returnIdsOnly": "true", "f": "pjson"}
     query_params_2 = {"where": "1=1", "text": "", "objectIds": "", "time": "", "geometry": "",
                       "geometryType": "esriGeometryEnvelope", "inSR": "", "spatialRel": "esriSpatialRelIntersects",
                       "distance": "", "units": "esriSRUnit_Foot", "relationParam": "", "outFields": "",
