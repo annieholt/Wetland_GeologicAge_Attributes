@@ -181,3 +181,32 @@ def calc_wetland_metrics(nwi_gdf, shed_gdf):
     shed_final = shed_gdf.merge(shed_sum_pivot, on=['gauge_id'])
 
     return shed_final
+
+
+import geopandas
+import fiona
+
+# Replace 'your_geodatabase.gdb' with the path to your geodatabase.
+geodatabase_path = "C:/Users/aholt8450/Documents/Data/NWI_testing.gdb"
+# Replace 'your_layer' with the name of the layer you want to query.
+layer_name = 'Wetlands_Merge_CONUS'
+
+# Replace 'your_polygon_layer.shp' with the path to your polygon layer.
+polygon_layer_path = 'C:/Users/aholt8450/Documents/Data/camels_test_basin.shp'
+
+# Load the polygon layer and the geodatabase layer using geopandas.
+polygon_gdf = geopandas.read_file(polygon_layer_path)
+
+# Open the geodatabase using fiona and list the available layers.
+with fiona.open(geodatabase_path, 'r') as src:
+    available_layers = [layer['name'] for layer in src]
+
+print(available_layers)
+
+# geodatabase_gdf = geopandas.read_file(f'GDB:{geodatabase_path}', layer=layer_name)
+#
+# # Perform a spatial query using the polygon layer to filter the geodatabase layer.
+# result = geopandas.sjoin(geodatabase_gdf, polygon_gdf, how="inner", op="intersects")
+#
+# # Now, 'result' contains the data from the geodatabase layer that intersects with the bounding box defined by the polygon layer.
+# print(result)
