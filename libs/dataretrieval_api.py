@@ -208,8 +208,8 @@ test_nwi_out = nwi_download_api(shed_gdf=test_shed_2,
                                 out_dir="E:/SDSU_GEOG/Thesis/Data/NWI_outputs/Shapefiles", save=False)
 print(test_nwi_out)
 
-# test_out_2 = test_nwi_out.overlay(test_shed_gdf, how='intersection')
-# print(test_out_2)
+test_out_2 = test_nwi_out.overlay(test_shed_gdf, how='intersection')
+print(test_out_2)
 
 
 def usgs_daily_download_api(siteid, out_dir, save=False):
@@ -381,9 +381,13 @@ def usgs_daily_prep(siteid, flow_cfs_df, drain_area, out_dir, save=False):
     return flow_df_final
 
 
-# # testing functions, on one USGS site
-# test_out = usgs_drain_area_download_api(siteid="02322800")
+# testing functions, on one USGS site
+test_out = usgs_drain_area_download_api(siteid="02322800")
 # test_df = usgs_daily_download_api(siteid="02322800",
 #                                   out_dir="C:/Users/holta/Documents/ArcGIS_Projects/wetland_metrics/Data", save=False)
+test_df = usgs_daily_download_api(siteid="02322800",
+                                  out_dir="C:/Users/aholt8450/Documents/Data/Gages_II", save=True)
 # test_df_prepped = usgs_daily_prep(siteid="02322800", drain_area=test_out, flow_cfs_df=test_df,
 #                                   out_dir="C:/Users/holta/Documents", save=True)
+test_df_prepped = usgs_daily_prep(siteid="02322800", drain_area=test_out, flow_cfs_df=test_df,
+                                  out_dir="C:/Users/aholt8450/Documents/Data/Gages_II_prepped", save=True)
