@@ -185,9 +185,9 @@ def calc_wetland_metrics(nwi_gdf, shed_gdf):
     return shed_final
 
 
-import geopandas
 import fiona
-from shapely.geometry import shape, box
+from shapely.geometry import shape, Polygon
+import geopandas
 
 # Replace 'your_geodatabase.gdb' with the path to your geodatabase.
 # geodatabase_path = "C:/Users/aholt8450/Documents/Data/NWI_testing.gdb"
@@ -200,34 +200,51 @@ layer_name = 'Wetlands_Merge_CONUS'
 # polygon_layer_path = 'C:/Users/aholt8450/Documents/Data/camels_test_basin.shp'
 polygon_layer_path = 'C:/Users/holta/Documents/ArcGIS_Projects/wetland_metrics/Data/camels_test_basin.shp'
 
-# Load the polygon layer and the geodatabase layer using geopandas.
-polygon_gdf = geopandas.read_file(polygon_layer_path)
-
 # names = fiona.listlayers("E:/SDSU_GEOG/Thesis/Data/NWI_CONUS/NWI_testing.gdb")
 # print(names)
 
+polygon_gdf = geopandas.read_file(polygon_layer_path)
+polygon_gdf_2 = polygon_gdf.to_crs(epsg=5070)
+bbox = polygon_gdf_2.total_bounds.tolist()
+print(bbox)
 
-# Load the polygon shapefile
-bounding_box_gdf = geopandas.read_file(polygon_layer_path)
+# out_gdf = geopandas.read_file(geodatabase_path, driver='FileGDB', layer=layer_name, bbox=bbox)
 
-# Calculate the bounding box of the shapefile
-bounding_box = bounding_box_gdf.total_bounds
-minx, miny, maxx, maxy = bounding_box
+out_gdf = geopandas.read_file(geodatabase_path, driver='FileGDB', layer=layer_name, mask=polygon_gdf_2)
 
-# Create a bounding box as a Shapely geometry
-bbox = box(minx, miny, maxx, maxy)
+out_gdf.to_file('C:/Users/holta/Documents/ArcGIS_Projects/wetland_metrics/Data/please_work_2.shp')
 
-# Open the geodatabase file
-gdb = geopandas.GeoDataFrame()
 
-with fiona.open(geodatabase_path, layer=layer_name) as src:
-    for feature in src:
-        feature_shape = shape(feature['geometry'])
-        if feature_shape.intersects(bbox):
-            gdb = gdb.append(geopandas.GeoDataFrame([feature]))
 
-# Do something with the query result, e.g., print it
-print(gdb)
 
-# # You can also save the result to a new shapefile if needed
-# gdb.to_file("query_result.shp")
+
+
+
+
+
+
+
+# # Load the polygon shapefile
+# bounding_box_gdf = geopandas.read_file(polygon_layer_path)
+#
+# # Calculate the bounding box of the shapefile
+# bounding_box = bounding_box_gdf.total_bounds
+# minx, miny, maxx, maxy = bounding_box
+#
+# # Create a bounding box as a Shapely geometry
+# bbox = box(minx, miny, maxx, maxy)
+#
+# # Open the geodatabase file
+# gdb = geopandas.GeoDataFrame()
+#
+# with fiona.open(geodatabase_path, layer=layer_name) as src:
+#     for feature in src:
+#         feature_shape = shape(feature['geometry'])
+#         if feature_shape.intersects(bbox):
+#             gdb = gdb.append(geopandas.GeoDataFrame([feature]))
+#
+# # Do something with the query result, e.g., print it
+# print(gdb)
+#
+# # # You can also save the result to a new shapefile if needed
+# # gdb.to_file("query_result.shp")
