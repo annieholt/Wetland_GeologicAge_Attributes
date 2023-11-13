@@ -31,6 +31,7 @@ def calc_area_nwi(input_gdf):
         print("No Polygon Type Geometry.")
         return None
 
+
 def calc_area_shed(input_gdf):
     """
     :param input_gdf: Input GeoDataFrame. Should be polygon geometry type.
@@ -132,6 +133,7 @@ def prep_nwi(nwi_gdf):
 
     return nwi_gdf
 
+
 # NWI/watershed spatial operation
 # Joining NWI wetlands to watershed(s) of interest.
 # Then summarizing, generating various wetland metrics (wetland area, area fraction, etc.)
@@ -185,28 +187,47 @@ def calc_wetland_metrics(nwi_gdf, shed_gdf):
 
 import geopandas
 import fiona
+from shapely.geometry import shape, box
 
 # Replace 'your_geodatabase.gdb' with the path to your geodatabase.
-geodatabase_path = "C:/Users/aholt8450/Documents/Data/NWI_testing.gdb"
+# geodatabase_path = "C:/Users/aholt8450/Documents/Data/NWI_testing.gdb"
+geodatabase_path = "E:/SDSU_GEOG/Thesis/Data/NWI_CONUS/NWI_testing.gdb"
+
 # Replace 'your_layer' with the name of the layer you want to query.
 layer_name = 'Wetlands_Merge_CONUS'
 
 # Replace 'your_polygon_layer.shp' with the path to your polygon layer.
-polygon_layer_path = 'C:/Users/aholt8450/Documents/Data/camels_test_basin.shp'
+# polygon_layer_path = 'C:/Users/aholt8450/Documents/Data/camels_test_basin.shp'
+polygon_layer_path = 'C:/Users/holta/Documents/ArcGIS_Projects/wetland_metrics/Data/camels_test_basin.shp'
 
 # Load the polygon layer and the geodatabase layer using geopandas.
 polygon_gdf = geopandas.read_file(polygon_layer_path)
 
-# Open the geodatabase using fiona and list the available layers.
-with fiona.open(geodatabase_path, 'r') as src:
-    available_layers = [layer['name'] for layer in src]
+# names = fiona.listlayers("E:/SDSU_GEOG/Thesis/Data/NWI_CONUS/NWI_testing.gdb")
+# print(names)
 
-print(available_layers)
 
-# geodatabase_gdf = geopandas.read_file(f'GDB:{geodatabase_path}', layer=layer_name)
-#
-# # Perform a spatial query using the polygon layer to filter the geodatabase layer.
-# result = geopandas.sjoin(geodatabase_gdf, polygon_gdf, how="inner", op="intersects")
-#
-# # Now, 'result' contains the data from the geodatabase layer that intersects with the bounding box defined by the polygon layer.
-# print(result)
+# Load the polygon shapefile
+bounding_box_gdf = geopandas.read_file(polygon_layer_path)
+
+# Calculate the bounding box of the shapefile
+bounding_box = bounding_box_gdf.total_bounds
+minx, miny, maxx, maxy = bounding_box
+
+# Create a bounding box as a Shapely geometry
+bbox = box(minx, miny, maxx, maxy)
+
+# Open the geodatabase file
+gdb = geopandas.GeoDataFrame()
+
+with fiona.open(geodatabase_path, layer=layer_name) as src:
+    for feature in src:
+        feature_shape = shape(feature['geometry'])
+        if feature_shape.intersects(bbox):
+            gdb = gdb.append(geopandas.GeoDataFrame([feature]))
+
+# Do something with the query result, e.g., print it
+print(gdb)
+
+# # You can also save the result to a new shapefile if needed
+# gdb.to_file("query_result.shp")
