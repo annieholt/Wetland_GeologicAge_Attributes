@@ -50,7 +50,7 @@ def calc_area_shed(input_gdf):
 
     if not gdf_area.empty:
         # Calculate area in square kilometers
-        gdf_area["shed_area_km2"] = gdf_area['geometry'].area / 10 ** 6
+        gdf_area["shed_area"] = gdf_area['geometry'].area / 10 ** 6
         return gdf_area
     else:
         print("No Polygon Type Geometry.")
@@ -71,14 +71,18 @@ def wetlands_in_shed(nwi_gdf, shed_gdf):
     try:
         # Reproject both GeoDataFrames to Albers Equal Area (EPSG:5070)
         nwi_gdf_albers = nwi_gdf.to_crs(epsg=5070)
+        # print(nwi_gdf_albers)
         shed_gdf_albers = shed_gdf.to_crs(epsg=5070)
+        # print(shed_gdf_albers)
     except Exception as e:
-        print(e)
+        print("error with crs: ", e)
         return None
 
     try:
         # Perform intersection to retain wetlands in watersheds
+        print('trying intersection')
         nwi_in_shed = geopandas.overlay(nwi_gdf_albers, shed_gdf_albers, how='intersection')
+        print(nwi_in_shed)
 
         # # Only retain necessary columns
         # columns_to_keep = ['attribute', 'wetland_ty', 'acres', 'shape_area', 'system', 'wet_class', 'geometry']
@@ -93,45 +97,47 @@ def wetlands_in_shed(nwi_gdf, shed_gdf):
 def prep_nwi(nwi_gdf):
     """
     Function to create wetland categories based on wetland type, which can be used to summarize wetlands in catchments.
-    :param nwi_gdf: GeoDataFrame of NWI data, should be polygon geometry. columns are 'attribute', 'wet_type', 'area_km2'
+    :param nwi_gdf: GeoDataFrame of NWI data, should be polygon geometry. columns are 'attribute', 'wetland_type', 'area_km2'
     :return: GeoDataFrame of NWI wetlands with updated attribute information.
     """
     # Make sure all column names lowercase
     nwi_gdf.columns = nwi_gdf.columns.str.lower()
 
     # Retain columns of interest
-    # nwi_filtered = nwi_gdf[['attribute', 'wetland_ty', 'area_km2', 'geometry']].copy()
+    nwi_gdf_subset = nwi_gdf[['attribute', 'wetland_ty', 'geometry']]
+    nwi_gdf_subset = nwi_gdf_subset.rename(columns={'wetlland_ty': 'wet_type'})
+
 
     # Add a new column with just the leading ATTRIBUTE letter for simplification
-    nwi_gdf['system'] = nwi_gdf['attribute'].str[:1]
+    nwi_gdf_subset['system'] = nwi_gdf_subset['attribute'].str[:1]
     # # Print out the unique attribute letters for checking purposes
     # filter_results = nwi_gdf['system'].unique()
     # print(filter_results)
 
     # Adding columns based on wetland type
     type_conditions = [
-        (nwi_gdf['wet_type'] == 'Estuarine and Marine Wetland'),
-        (nwi_gdf['wet_type'] == 'Estuarine and Marine Deepwater'),
-        (nwi_gdf['wet_type'] == 'Freshwater Emergent Wetland'),
-        (nwi_gdf['wet_type'] == 'Freshwater Forested/Shrub Wetland'),
-        (nwi_gdf['wet_type'] == 'Freshwater Pond'),
-        (nwi_gdf['wet_type'] == 'Lake'),
-        (nwi_gdf['wet_type'] == 'Riverine'),
-        (nwi_gdf['wet_type'] == 'Other')
+        (nwi_gdf_subset['wet_type'] == 'Estuarine and Marine Wetland'),
+        (nwi_gdf_subset['wet_type'] == 'Estuarine and Marine Deepwater'),
+        (nwi_gdf_subset['wet_type'] == 'Freshwater Emergent Wetland'),
+        (nwi_gdf_subset['wet_type'] == 'Freshwater Forested/Shrub Wetland'),
+        (nwi_gdf_subset['wet_type'] == 'Freshwater Pond'),
+        (nwi_gdf_subset['wet_type'] == 'Lake'),
+        (nwi_gdf_subset['wet_type'] == 'Riverine'),
+        (nwi_gdf_subset['wet_type'] == 'Other')
     ]
     # using on above type conditions, sort into more general wetland class categories
     # based on methods in Gnann et al., 2021
     type_results = ['est', 'est', 'fresh', 'fresh', 'fresh', 'lake', 'other', 'other']
 
     # Create a new column based on above assignments
-    nwi_gdf['wet_class'] = numpy.select(type_conditions, type_results)
+    nwi_gdf_subset['wet_class'] = numpy.select(type_conditions, type_results)
     # print(nwi_gdf)
 
     # # Print out the unique wetland class values for checking purposes
     # class_results = nwi_gdf['wet_class'].unique()
     # print(class_results)
 
-    return nwi_gdf
+    return nwi_gdf_subset
 
 
 # NWI/watershed spatial operation
@@ -176,75 +182,43 @@ def calc_wetland_metrics(nwi_gdf, shed_gdf):
     # Pivot the data for easier visualization, one row per hru_id, one column per wetland class
     # shed_sum_pivot = shed_sum.pivot(index=['gauge_id'], columns='wet_class', values='area_frac')
     shed_sum_pivot = shed_sum.pivot(index=['gauge_id'], columns='wet_class', values='area_frac')
-    shed_final = shed_sum_pivot.reset_index()
+    shed_reset = shed_sum_pivot.reset_index()
     # print(shed_final)
 
     # Merge the summary data back to the watershed shapefile so the output is geodataset
-    shed_final = shed_gdf.merge(shed_sum_pivot, on=['gauge_id'])
+    shed_final = shed_gdf.merge(shed_reset, on=['gauge_id'])
 
     return shed_final
 
 
-import fiona
-from shapely.geometry import shape, Polygon
-import geopandas
+camels_sheds = geopandas.read_file(
+            'C:/Users/aholt8450/Documents/Data/basin_set_full_res/HCDN_nhru_final_671.shp')
+camels_sheds_2 = camels_sheds.loc[:, ['hru_id', 'geometry']]
+camels_sheds_2 = camels_sheds_2.rename(columns={'hru_id': 'gauge_id'})
+camels_sheds_2['gauge_id'] = camels_sheds_2['gauge_id'].astype(str).str.zfill(8)
 
-# Replace 'your_geodatabase.gdb' with the path to your geodatabase.
-# geodatabase_path = "C:/Users/aholt8450/Documents/Data/NWI_testing.gdb"
-geodatabase_path = "E:/SDSU_GEOG/Thesis/Data/NWI_CONUS/NWI_testing.gdb"
+camels_test = camels_sheds_2.iloc[[0]]
+print(camels_test)
+nwi_test = geopandas.read_file('C:/Users/aholt8450/Documents/Data/NWI_camels/01013500_nwi_wetlands.shp')
 
-# Replace 'your_layer' with the name of the layer you want to query.
-layer_name = 'Wetlands_Merge_CONUS'
+# shed area first
+shed_area = calc_area_shed(camels_test)
 
-# Replace 'your_polygon_layer.shp' with the path to your polygon layer.
-# polygon_layer_path = 'C:/Users/aholt8450/Documents/Data/camels_test_basin.shp'
-polygon_layer_path = 'C:/Users/holta/Documents/ArcGIS_Projects/wetland_metrics/Data/camels_test_basin.shp'
+# then making sure to only have wetlands within watershed boundary (not just intersecting)
+nwi_shed_join = wetlands_in_shed(nwi_test, shed_area)
 
-# names = fiona.listlayers("E:/SDSU_GEOG/Thesis/Data/NWI_CONUS/NWI_testing.gdb")
-# print(names)
+# now calculating wetland areas
+nwi_area = calc_area_nwi(nwi_shed_join)
+print(nwi_area)
 
-polygon_gdf = geopandas.read_file(polygon_layer_path)
-polygon_gdf_2 = polygon_gdf.to_crs(epsg=5070)
-bbox = polygon_gdf_2.total_bounds.tolist()
-print(bbox)
+nwi_shed_join.to_file('C:/Users/aholt8450/Documents/Data/test_intersect.shp', index=False)
 
-# out_gdf = geopandas.read_file(geodatabase_path, driver='FileGDB', layer=layer_name, bbox=bbox)
+print('exported')
 
-out_gdf = geopandas.read_file(geodatabase_path, driver='FileGDB', layer=layer_name, mask=polygon_gdf_2)
+nwi_prep = prep_nwi(nwi_shed_join)
 
-out_gdf.to_file('C:/Users/holta/Documents/ArcGIS_Projects/wetland_metrics/Data/please_work_2.shp')
-
+# print(nwi_prep)
 
 
+# nwi_metrics = calc_wetland_metrics(nwi_prep, shed_area)
 
-
-
-
-
-
-
-
-# # Load the polygon shapefile
-# bounding_box_gdf = geopandas.read_file(polygon_layer_path)
-#
-# # Calculate the bounding box of the shapefile
-# bounding_box = bounding_box_gdf.total_bounds
-# minx, miny, maxx, maxy = bounding_box
-#
-# # Create a bounding box as a Shapely geometry
-# bbox = box(minx, miny, maxx, maxy)
-#
-# # Open the geodatabase file
-# gdb = geopandas.GeoDataFrame()
-#
-# with fiona.open(geodatabase_path, layer=layer_name) as src:
-#     for feature in src:
-#         feature_shape = shape(feature['geometry'])
-#         if feature_shape.intersects(bbox):
-#             gdb = gdb.append(geopandas.GeoDataFrame([feature]))
-#
-# # Do something with the query result, e.g., print it
-# print(gdb)
-#
-# # # You can also save the result to a new shapefile if needed
-# # gdb.to_file("query_result.shp")
