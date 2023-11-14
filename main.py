@@ -1,42 +1,19 @@
 # Workflow for CAMELS and GAGES II Catchments
 
-# first downloading and prepping flow data
-# then running MatLab TOSSH toolbox functions to generated groundwater signatures
-# next, download NWI data for catchments and generate wetland metrics
-# finally, analyze the relationships
+# download NWI data for catchments and generate wetland metrics
 
-# # importing module libraries
+# download usgs streamflow data for gages II watersheds
+
+# importing module libraries
 # from libs.dataretrieval_api import *
-# from libs.calculate_metrics import *
 import multiprocessing
 from libs.calculate_metrics import *
+from libs.dataretrieval_nwis import *
 import os
 
 # def nwi_iter(shed_gdf):
 #     try:
 #         # data retrieval
-#
-#         geodatabase_path = "C:/Users/aholt8450/Documents/ArcGIS/Projects/NWI_testing/NWI_testing.gdb"
-#         layer_name = 'Wetlands_Merge_CONUS'
-#         out_dir = 'C:/Users/aholt8450/Documents/Data/NWI_camels'
-#
-#         out_gdf = geopandas.read_file(geodatabase_path, driver='FileGDB', layer=layer_name, mask=shed_gdf)
-#         print(out_gdf)
-#
-#         # getting watershed id
-#         gauge_id = shed_gdf['gauge_id'].iloc[0]
-#         print(gauge_id)
-#         # output path for data
-#         file_name = gauge_id + '_nwi_wetlands.shp'
-#         # print(file_name)
-#         # create pull file path
-#         file_path = os.path.join(out_dir, file_name)
-#         print(file_path)
-#         # save the GeoDataFrame as a shapefile
-#         out_gdf.to_file(file_path)
-#         print(f"Downloaded data and saved as {file_path}")
-#
-#
 #         # nwi_gdf = nwi_download_api(shed_gdf=shed_gdf, out_dir="E:/SDSU_GEOG/Thesis/Data/NWI_outputs/Shapefiles",
 #         #                            save=False)
 #         # # metrics processing
@@ -52,13 +29,9 @@ import os
 #
 #     return out_gdf
 
-def main():
-    # WETLAND WORKFLOW, camels watersheds
-    # began at 3:41 pm
-
+def nwi_camels_download():
     try:
-        # iterate data retrieval and metrics calculation for each camels watershed
-
+        # iterate data retrieval for each camels watershed
         # camels_sheds = geopandas.read_file('E:/SDSU_GEOG/Thesis/Data/CAMELS/basin_set_full_res/HCDN_nhru_final_671.shp')
         camels_sheds = geopandas.read_file(
             'C:/Users/aholt8450/Documents/Data/basin_set_full_res/HCDN_nhru_final_671.shp')
@@ -110,95 +83,104 @@ def main():
     except Exception as e:
         print(f"An error occurred: {e}")
 
+def nwi_metrics_workflow_camels():
+    # prep nwi data and run metrics calculation for each camels watershed
+    camels_sheds = geopandas.read_file('E:/SDSU_GEOG/Thesis/Data/CAMELS/basin_set_full_res/HCDN_nhru_final_671.shp')
 
-
-    # # Initialize a multiprocessing Pool
-    # with multiprocessing.Pool(processes=8) as pool:
-    #     # Run the function in parallel using the Pool for each input region
-    #     results = pool.map(nwi_iter, camels_sheds_list)
-    #     print(results)
-
-
-
-    # # WETLAND WORKFLOW, camels watersheds
-    # # iterate data retrieval and metrics calculation for each camels watershed
-    #
-    # camels_sheds = geopandas.read_file('E:/SDSU_GEOG/Thesis/Data/CAMELS/basin_set_full_res/HCDN_nhru_final_671.shp')
-    #
     # # first, testing a smaller subset
     # camels_sheds_test = camels_sheds.head(10).copy()
     # # print(camels_sheds_test)
-    #
-    # # Initialize an empty list to store the results
-    # results = []
-    #
-    # for index, row in camels_sheds_test.iterrows():
-    #     # create a geodataframe for current watershed
-    #     current_shed = geopandas.GeoDataFrame([row], geometry='geometry', crs=camels_sheds_test.crs)
-    #
-    #     # removing unneeded attribute data and making sure ID column has 8 values (leading zero sometimes)
-    #     shed_gdf = current_shed.loc[:, ['hru_id', 'geometry']]
-    #     shed_gdf = shed_gdf.rename(columns={'hru_id': 'gauge_id'})
-    #     shed_gdf['gauge_id'] = shed_gdf['gauge_id'].astype(str).str.zfill(8)
-    #
-    #     # data retrieval
-    #     nwi_gdf = nwi_download_api(shed_gdf=shed_gdf, out_dir="E:/SDSU_GEOG/Thesis/Data/NWI_outputs/Shapefiles",
-    #                                save=True)
-    #
-    #     # metrics processing
-    #     nwi_area = calc_area_nwi(nwi_gdf)
-    #     shed_area = calc_area_shed(shed_gdf)
-    #     nwi_shed_join = wetlands_in_shed(nwi_area, shed_area)
-    #     nwi_prep = prep_nwi(nwi_shed_join)
-    #     nwi_metrics = calc_wetland_metrics(nwi_prep, shed_area)
-    #
-    #     # add to results
-    #     results.append(nwi_metrics)
-    #
-    # result_gdf = pandas.concat(results, ignore_index=True)
-    # result_gdf.to_file("E:/SDSU_GEOG/Thesis/Data/NWI_outputs/Shapefiles/metrics_test.shp")
-    # # print(result_gdf)
+
+    # Initialize an empty list to store the results
+    results = []
+
+    for index, row in camels_sheds.iterrows():
+
+        try:
+            # create a geodataframe for current watershed
+            single_row_gdf = camels_sheds.iloc[[index]]
+
+            # removing unneeded attribute data and making sure ID column has 8 values (leading zero sometimes)
+            shed_gdf = single_row_gdf.loc[:, ['hru_id', 'geometry']]
+            shed_gdf = shed_gdf.rename(columns={'hru_id': 'gauge_id'})
+            shed_gdf['gauge_id'] = shed_gdf['gauge_id'].astype(str).str.zfill(8)
+            # print(shed_gdf)
+
+            # # data retrieval
+            # nwi_gdf = nwi_download_api(shed_gdf=shed_gdf, out_dir="E:/SDSU_GEOG/Thesis/Data/NWI_outputs/Shapefiles",
+            #                            save=True)
+
+            nwi_path = 'E:/SDSU_GEOG/Thesis/Data/NWI_camels'
+            gauge_id = shed_gdf['gauge_id'].iloc[0]
+            file_name = gauge_id + '_nwi_wetlands.shp'
+            # print(file_name)
+            # create pull file path
+            file_path = os.path.join(nwi_path, file_name)
+            print(file_path)
+            nwi_gdf = geopandas.read_file(file_path)
+            # print(nwi_gdf)
+
+            # metrics processing; below function order is required
+            shed_area = calc_area_shed(shed_gdf)
+            nwi_prep = prep_nwi(nwi_gdf)
+            nwi_shed_join = wetlands_in_shed(nwi_prep, shed_area)
+            nwi_area = calc_area_nwi(nwi_shed_join)
+            nwi_metrics = calc_wetland_metrics(nwi_area, shed_area)
+
+            # add to results
+            results.append(nwi_metrics)
+
+        except Exception as e:
+            print(f"An error occurred: {e}")
+
+    result_gdf = pandas.concat(results, ignore_index=True)
+    # print(result_gdf)
+    result_gdf.to_file("E:/SDSU_GEOG/Thesis/Data/NWI_outputs/Shapefiles/nwi_camels_metrics.shp")
 
 
+def download_flow():
+    # using CAMELS watersheds
+    camels_ids = pandas.read_csv('E:/SDSU_GEOG/Thesis/Data/CAMELS/camels_name.txt', delimiter=';')
+    # convert column with ids to string and add leading zeros if they were lost
+    camels_ids['gauge_id'] = camels_ids['gauge_id'].astype(str).str.zfill(8)
+    # print(camels_ids)
 
+    # now want all gaugeids in GAges II reference dataset, except CAMELs
+    # downloaded basin ID file here: https://www.sciencebase.gov/catalog/item/59692a64e4b0d1f9f05fbd39
+    gages_II_ids = pandas.read_csv('E:/SDSU_GEOG/Thesis/Data/Gages-II/BasinID.txt', delimiter=',')
+    # print(gages_II_ids)
+    gages_II_ids['STAID'] = gages_II_ids['STAID'].astype(str).str.zfill(8)
+
+    gages_II_ids_ref = gages_II_ids.loc[gages_II_ids['CLASS'] == 'Ref']
+    # print(len(gages_II_ids_ref['STAID']))
+
+    # now just get siteids not in camels list, for reference gages
+    siteids_list = list(set(gages_II_ids_ref['STAID']) - set(camels_ids['gauge_id']))
+    print(siteids_list)
+    print(len(siteids_list))
+
+    # downloading flow data and saving in format required for TOSSH toolbox processing
+    for num in range(len(siteids_list)):
+        siteid = siteids_list[num]
+        print(siteid)
+        # out_dir_1 = "E:/SDSU_GEOG/Thesis/Data/Gages-II/usgs_streamflow"
+        out_dir_1 = "C:/Users/aholt8450/Documents/Data/usgs_streamflow"
+        # out_dir_2 = "E:/SDSU_GEOG/Thesis/Data/Gages-II/usgs_streamflow/mm_day"
+        out_dir_2 = "C:/Users/aholt8450/Documents/Data/usgs_streamflow/mm_day"
+
+        drain_area = usgs_drain_area_download_api(siteid=siteid)
+        print(drain_area)
+        flow_cfs_df = usgs_daily_download_api(siteid=siteid, out_dir=out_dir_1, save=True)
+        flow_mm_day_df = usgs_daily_prep(siteid=siteid, drain_area=drain_area,
+                                         flow_cfs_df=flow_cfs_df, out_dir=out_dir_2, save=True)
+
+
+def main():
+    nwi_metrics_workflow_camels()
 
 
     # SIGNATURE WORKFLOW
-
-    # # using CAMELS watersheds
-    # camels_ids = pandas.read_csv('E:/SDSU_GEOG/Thesis/Data/CAMELS/camels_name.txt', delimiter=';')
-    # # convert column with ids to string and add leading zeros if they were lost
-    # camels_ids['gauge_id'] = camels_ids['gauge_id'].astype(str).str.zfill(8)
-    # # print(camels_ids)
-    #
-    # # now want all gaugeids in GAges II reference dataset, except CAMELs
-    # # downloaded basin ID file here: https://www.sciencebase.gov/catalog/item/59692a64e4b0d1f9f05fbd39
-    # gages_II_ids = pandas.read_csv('E:/SDSU_GEOG/Thesis/Data/Gages-II/BasinID.txt', delimiter=',')
-    # # print(gages_II_ids)
-    # gages_II_ids['STAID'] = gages_II_ids['STAID'].astype(str).str.zfill(8)
-    #
-    # gages_II_ids_ref = gages_II_ids.loc[gages_II_ids['CLASS'] == 'Ref']
-    # # print(len(gages_II_ids_ref['STAID']))
-    #
-    # # now just get siteids not in camels list, for reference gages
-    # siteids_list = list(set(gages_II_ids_ref['STAID']) - set(camels_ids['gauge_id']))
-    # print(siteids_list)
-    # print(len(siteids_list))
-    #
-    # # downloading flow data and saving in format required for TOSSH toolbox processing
-    # for num in range(len(siteids_list)):
-    #     siteid = siteids_list[num]
-    #     print(siteid)
-    #     # out_dir_1 = "E:/SDSU_GEOG/Thesis/Data/Gages-II/usgs_streamflow"
-    #     out_dir_1 = "C:/Users/aholt8450/Documents/Data/usgs_streamflow"
-    #     # out_dir_2 = "E:/SDSU_GEOG/Thesis/Data/Gages-II/usgs_streamflow/mm_day"
-    #     out_dir_2 = "C:/Users/aholt8450/Documents/Data/usgs_streamflow/mm_day"
-    #
-    #     drain_area = usgs_drain_area_download_api(siteid=siteid)
-    #     print(drain_area)
-    #     flow_cfs_df = usgs_daily_download_api(siteid=siteid,out_dir=out_dir_1, save=True)
-    #     flow_mm_day_df = usgs_daily_prep(siteid=siteid, drain_area=drain_area,
-    #                                                             flow_cfs_df=flow_cfs_df, out_dir=out_dir_2, save=True)
+    # download_flow()
 
 
 # Press the green button in the gutter to run the script.
