@@ -46,7 +46,7 @@ def usgs_daily_download_api(siteid, out_dir, save=False):
         # convert date column to datetime format
         q_df["date"] = pandas.to_datetime(q_df["date"])
 
-        print(q_df)
+        # print(q_df)
 
         if save:
             # create output file path
