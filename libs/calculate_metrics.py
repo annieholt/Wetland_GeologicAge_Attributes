@@ -80,9 +80,9 @@ def wetlands_in_shed(nwi_gdf, shed_gdf):
 
     try:
         # Perform intersection to retain wetlands in watersheds
-        print('trying intersection')
+        # print('trying intersection')
         nwi_in_shed = geopandas.overlay(nwi_gdf_albers, shed_gdf_albers, how='intersection')
-        print(nwi_in_shed)
+        # print(nwi_in_shed)
 
         # # Only retain necessary columns
         # columns_to_keep = ['attribute', 'wetland_ty', 'acres', 'shape_area', 'system', 'wet_class', 'geometry']
@@ -105,7 +105,7 @@ def prep_nwi(nwi_gdf):
 
     # Retain columns of interest
     nwi_gdf_subset = nwi_gdf[['attribute', 'wetland_ty', 'geometry']]
-    nwi_gdf_subset = nwi_gdf_subset.rename(columns={'wetlland_ty': 'wet_type'})
+    nwi_gdf_subset = nwi_gdf_subset.rename(columns={'wetland_ty': 'wet_type'})
 
 
     # Add a new column with just the leading ATTRIBUTE letter for simplification
@@ -152,7 +152,7 @@ def calc_wetland_metrics(nwi_gdf, shed_gdf):
     :return: GeoDataFrame of wetland summary info for watersheds.
     """
     # Check if all necessary columns exist
-    required_columns = {'gauge_id', 'area_km2', 'system', 'wet_type', 'shed_area_km2'}
+    required_columns = {'gauge_id', 'area_km2', 'system', 'wet_type', 'shed_area'}
     if not required_columns.issubset(nwi_gdf.columns):
         print("Required columns are missing.")
         return None
@@ -173,10 +173,10 @@ def calc_wetland_metrics(nwi_gdf, shed_gdf):
     nwi_gdf['area_km2'].fillna(0, inplace=True)
 
     # Group by each watershed and wetland class and summarize the total area
-    shed_sum = nwi_gdf.groupby(['gauge_id', 'wet_class', 'shed_area_km2'])['area_km2'].sum().reset_index()
+    shed_sum = nwi_gdf.groupby(['gauge_id', 'wet_class', 'shed_area'])['area_km2'].sum().reset_index()
 
     # Calculate the area fraction
-    shed_sum['area_frac'] = shed_sum['area_km2'] / shed_sum['shed_area_km2']
+    shed_sum['area_frac'] = shed_sum['area_km2'] / shed_sum['shed_area']
     # print(shed_sum)
 
     # Pivot the data for easier visualization, one row per hru_id, one column per wetland class
@@ -191,34 +191,35 @@ def calc_wetland_metrics(nwi_gdf, shed_gdf):
     return shed_final
 
 
-camels_sheds = geopandas.read_file(
-            'C:/Users/aholt8450/Documents/Data/basin_set_full_res/HCDN_nhru_final_671.shp')
-camels_sheds_2 = camels_sheds.loc[:, ['hru_id', 'geometry']]
-camels_sheds_2 = camels_sheds_2.rename(columns={'hru_id': 'gauge_id'})
-camels_sheds_2['gauge_id'] = camels_sheds_2['gauge_id'].astype(str).str.zfill(8)
-
-camels_test = camels_sheds_2.iloc[[0]]
-print(camels_test)
-nwi_test = geopandas.read_file('C:/Users/aholt8450/Documents/Data/NWI_camels/01013500_nwi_wetlands.shp')
-
-# shed area first
-shed_area = calc_area_shed(camels_test)
-
-# then making sure to only have wetlands within watershed boundary (not just intersecting)
-nwi_shed_join = wetlands_in_shed(nwi_test, shed_area)
-
-# now calculating wetland areas
-nwi_area = calc_area_nwi(nwi_shed_join)
-print(nwi_area)
-
-nwi_shed_join.to_file('C:/Users/aholt8450/Documents/Data/test_intersect.shp', index=False)
-
-print('exported')
-
-nwi_prep = prep_nwi(nwi_shed_join)
-
-# print(nwi_prep)
-
-
-# nwi_metrics = calc_wetland_metrics(nwi_prep, shed_area)
+# # camels_sheds = geopandas.read_file(
+# #             'C:/Users/aholt8450/Documents/Data/basin_set_full_res/HCDN_nhru_final_671.shp')
+# camels_sheds = geopandas.read_file(
+#             'E:/SDSU_GEOG/Thesis/Data/CAMELS/basin_set_full_res/HCDN_nhru_final_671.shp')
+#
+# camels_sheds_2 = camels_sheds.loc[:, ['hru_id', 'geometry']]
+# camels_sheds_2 = camels_sheds_2.rename(columns={'hru_id': 'gauge_id'})
+# camels_sheds_2['gauge_id'] = camels_sheds_2['gauge_id'].astype(str).str.zfill(8)
+#
+# camels_test = camels_sheds_2.iloc[[0]]
+# # print(camels_test)
+# # nwi_test = geopandas.read_file('C:/Users/aholt8450/Documents/Data/NWI_camels/01013500_nwi_wetlands.shp')
+#
+# nwi_test = geopandas.read_file('E:/SDSU_GEOG/Thesis/Data/NWI_camels/01013500_nwi_wetlands.shp')
+#
+# # shed area first
+# shed_area = calc_area_shed(camels_test)
+#
+# nwi_prep = prep_nwi(nwi_test)
+# # print(nwi_prep)
+#
+# # then making sure to only have wetlands within watershed boundary (not just intersecting)
+# nwi_shed_join = wetlands_in_shed(nwi_prep, shed_area)
+# print(nwi_shed_join)
+#
+# # now calculating wetland areas
+# nwi_area = calc_area_nwi(nwi_shed_join)
+# print(nwi_area)
+#
+# nwi_metrics = calc_wetland_metrics(nwi_area, shed_area)
+# print(nwi_metrics)
 
