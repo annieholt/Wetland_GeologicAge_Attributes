@@ -127,6 +127,14 @@ def nwi_metrics_workflow_camels():
             nwi_area = calc_area_nwi(nwi_shed_join)
             nwi_metrics = calc_wetland_metrics(nwi_area, shed_area)
 
+            # export just in case for now
+            file_name_export = gauge_id + '_wetland_metrics.shp'
+            # create pull file path
+            file_path_export = os.path.join('E:/SDSU_GEOG/Thesis/Data/NWI_outputs/Shapefiles/by_id',
+                                            file_name_export)
+            print(file_path_export)
+            nwi_metrics.to_file(file_path_export, index=False)
+
             # add to results
             results.append(nwi_metrics)
 
@@ -146,27 +154,34 @@ def download_flow():
     # print(camels_ids)
 
     # now want all gaugeids in GAges II reference dataset, except CAMELs
-    # downloaded basin ID file here: https://www.sciencebase.gov/catalog/item/59692a64e4b0d1f9f05fbd39
-    gages_II_ids = pandas.read_csv('E:/SDSU_GEOG/Thesis/Data/Gages-II/BasinID.txt', delimiter=',')
-    # print(gages_II_ids)
-    gages_II_ids['STAID'] = gages_II_ids['STAID'].astype(str).str.zfill(8)
+    # # downloaded basin ID file here: https://www.sciencebase.gov/catalog/item/59692a64e4b0d1f9f05fbd39
+    # gages_II_ids = pandas.read_csv('E:/SDSU_GEOG/Thesis/Data/Gages-II/BasinID.txt', delimiter=',')
+    # # print(gages_II_ids)
+    # gages_II_ids['STAID'] = gages_II_ids['STAID'].astype(str).str.zfill(8)
+    # gages_II_ids_ref = gages_II_ids.loc[gages_II_ids['CLASS'] == 'Ref']
+    # # print(len(gages_II_ids_ref['STAID']))
 
-    gages_II_ids_ref = gages_II_ids.loc[gages_II_ids['CLASS'] == 'Ref']
-    # print(len(gages_II_ids_ref['STAID']))
+    gages_II_ids_ref = pandas.read_csv('E:/SDSU_GEOG/Thesis/Data/Gages-II/basinID_ref.csv', delimiter=',')
+    gages_II_ids_ref['GAGE_ID'] = gages_II_ids_ref['GAGE_ID'].astype(str).str.zfill(8)
+    # print(gages_II_ids_ref)
 
     # now just get siteids not in camels list, for reference gages
-    siteids_list = list(set(gages_II_ids_ref['STAID']) - set(camels_ids['gauge_id']))
+    siteids_list = list(set(gages_II_ids_ref['GAGE_ID']) - set(camels_ids['gauge_id']))
     print(siteids_list)
     print(len(siteids_list))
+
+    # note that I changed the folder location to usgs_streamflow_2 for the second iteration
+    # the first iteration I used the BasinID text file, the second I pulled gage ids from the ref shapefile instead
+    # I was suspicious that the two lists of IDs were different from each other
 
     # downloading flow data and saving in format required for TOSSH toolbox processing
     for num in range(len(siteids_list)):
         siteid = siteids_list[num]
         print(siteid)
-        # out_dir_1 = "E:/SDSU_GEOG/Thesis/Data/Gages-II/usgs_streamflow"
-        out_dir_1 = "C:/Users/aholt8450/Documents/Data/usgs_streamflow"
-        # out_dir_2 = "E:/SDSU_GEOG/Thesis/Data/Gages-II/usgs_streamflow/mm_day"
-        out_dir_2 = "C:/Users/aholt8450/Documents/Data/usgs_streamflow/mm_day"
+        out_dir_1 = "E:/SDSU_GEOG/Thesis/Data/Gages-II/usgs_streamflow_2"
+        # out_dir_1 = "C:/Users/aholt8450/Documents/Data/usgs_streamflow"
+        out_dir_2 = "E:/SDSU_GEOG/Thesis/Data/Gages-II/usgs_streamflow_2/mm_day"
+        # out_dir_2 = "C:/Users/aholt8450/Documents/Data/usgs_streamflow/mm_day"
 
         drain_area = usgs_drain_area_download_api(siteid=siteid)
         print(drain_area)
@@ -176,11 +191,10 @@ def download_flow():
 
 
 def main():
-    nwi_metrics_workflow_camels()
-
+    # nwi_metrics_workflow_camels()
 
     # SIGNATURE WORKFLOW
-    # download_flow()
+    download_flow()
 
 
 # Press the green button in the gutter to run the script.
