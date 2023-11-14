@@ -32,25 +32,25 @@ import os
 #     return out_gdf
 
 def nwi_camels_download():
-    try:
-        # iterate data retrieval for each camels watershed
-        # camels_sheds = geopandas.read_file('E:/SDSU_GEOG/Thesis/Data/CAMELS/basin_set_full_res/HCDN_nhru_final_671.shp')
-        camels_sheds = geopandas.read_file(
-            'C:/Users/aholt8450/Documents/Data/basin_set_full_res/HCDN_nhru_final_671.shp')
+    # iterate data retrieval for each camels watershed
+    # camels_sheds = geopandas.read_file('E:/SDSU_GEOG/Thesis/Data/CAMELS/basin_set_full_res/HCDN_nhru_final_671.shp')
+    camels_sheds = geopandas.read_file(
+        'C:/Users/aholt8450/Documents/Data/basin_set_full_res/HCDN_nhru_final_671.shp')
 
-        camels_sheds_2 = camels_sheds.loc[:, ['hru_id', 'geometry']]
-        camels_sheds_2 = camels_sheds_2.rename(columns={'hru_id': 'gauge_id'})
-        camels_sheds_2['gauge_id'] = camels_sheds_2['gauge_id'].astype(str).str.zfill(8)
+    camels_sheds_2 = camels_sheds.loc[:, ['hru_id', 'geometry']]
+    camels_sheds_2 = camels_sheds_2.rename(columns={'hru_id': 'gauge_id'})
+    camels_sheds_2['gauge_id'] = camels_sheds_2['gauge_id'].astype(str).str.zfill(8)
 
-        # first, testing a smaller subset
-        # camels_sheds_test = camels_sheds_2.head(10).copy()
-        # print(camels_sheds_test)
+    # first, testing a smaller subset
+    # camels_sheds_test = camels_sheds_2.head(10).copy()
+    # print(camels_sheds_test)
 
-        # empty list for watershed data
-        camels_sheds_list = []
+    # empty list for watershed data
+    camels_sheds_list = []
 
-        # Loop through each row in the original GeoDataFrame
-        for index, row in camels_sheds_2.iterrows():
+    # Loop through each row in the original GeoDataFrame
+    for index, row in camels_sheds_2.iterrows():
+        try:
             # Create a new GeoDataFrame with a single row
             single_row_gdf = camels_sheds_2.iloc[[index]]
             # print(single_row_gdf)
@@ -82,8 +82,9 @@ def nwi_camels_download():
             out_gdf.to_file(file_path, index=False)
             print(f"Downloaded data and saved as {file_path}")
 
-    except Exception as e:
-        print(f"An error occurred: {e}")
+        except Exception as e:
+            print(f"An error occurred: {e}")
+
 
 def nwi_metrics_workflow_camels():
     # prep nwi data and run metrics calculation for each camels watershed
@@ -149,40 +150,43 @@ def nwi_metrics_workflow_camels():
 
 
 def nwi_gagesII_download():
-    try:
-        # iterate data retrieval for each reference gages II watershed
-        ref_sheds = geopandas.read_file(
-            'C:/Users/aholt8450/Documents/Data/Gages-II/boundaries-shapefiles-by-aggeco/bas_ref_all.shp')
+    # iterate data retrieval for each reference gages II watershed
+    ref_sheds = geopandas.read_file(
+        'C:/Users/aholt8450/Documents/Data/Gages-II/boundaries-shapefiles-by-aggeco/bas_ref_all.shp')
 
-        ref_sheds_2 = ref_sheds.loc[:, ['GAGE_ID', 'geometry']]
-        ref_sheds_2 = ref_sheds_2.rename(columns={'GAGE_ID': 'gauge_id'})
-        ref_sheds_2['gauge_id'] = ref_sheds_2['gauge_id'].astype(str).str.zfill(8)
-        # print(ref_sheds_2)
+    ref_sheds_2 = ref_sheds.loc[:, ['GAGE_ID', 'geometry']]
+    ref_sheds_2 = ref_sheds_2.rename(columns={'GAGE_ID': 'gauge_id'})
+    ref_sheds_2['gauge_id'] = ref_sheds_2['gauge_id'].astype(str).str.zfill(8)
+    # print(ref_sheds_2)
 
-        # want to just do the reference watersheds we also have flow data for, for now
-        # so reading in names of flow data files, and using the gage IDs to filter the sheds
+    # want to just do the reference watersheds we also have flow data for, for now
+    # so reading in names of flow data files, and using the gage IDs to filter the sheds
 
-        flow_files = os.listdir('C:/Users/aholt8450/Documents/Data/Gages-II/usgs_streamflow_2/mm_day')
-        # print(flow_files)
-        ids_list = []
+    flow_files = os.listdir('C:/Users/aholt8450/Documents/Data/Gages-II/usgs_streamflow_2/mm_day')
+    # print(flow_files)
+    ids_list = []
 
-        for name in flow_files:
-            gauge_id = name.split('.csv')[0]
-            ids_list.append(gauge_id)
+    for name in flow_files:
+        gauge_id = name.split('.csv')[0]
+        ids_list.append(gauge_id)
 
-        # print(ids_list)
+    # print(ids_list)
 
-        # only get NWI data for the new reference watersheds (not including those in camels or failed downloads)
-        ref_sheds_filtered = ref_sheds_2[ref_sheds_2['gauge_id'].isin(ids_list)]
-        # print(ref_sheds_filtered)
+    # only get NWI data for the new reference watersheds (not including those in camels or failed downloads)
+    ref_sheds_filtered = ref_sheds_2[ref_sheds_2['gauge_id'].isin(ids_list)]
+    # print(ref_sheds_filtered)
 
-        # empty list for watershed data
-        ref_sheds_list = []
+    # ref_sheds_filtered_2 = ref_sheds_filtered[]
 
-        # Loop through each row in the original GeoDataFrame
-        for index, row in ref_sheds_filtered.iterrows():
+    # empty list for watershed data
+    ref_sheds_list = []
+
+    # Loop through each row in the original GeoDataFrame
+    for row in ref_sheds_filtered.itertuples(index=True, name='RowData'):
+        try:
             # Create a new GeoDataFrame with a single row
-            single_row_gdf = ref_sheds_filtered.iloc[[index]]
+            single_row_gdf = geopandas.GeoDataFrame([row], geometry='geometry', crs=ref_sheds_filtered.crs)
+            # single_row_gdf = ref_sheds_filtered.iloc[[index]]
             # print(single_row_gdf)
 
             # Append it to the list
@@ -212,8 +216,8 @@ def nwi_gagesII_download():
             out_gdf.to_file(file_path, index=False)
             print(f"Downloaded data and saved as {file_path}")
 
-    except Exception as e:
-        print(f"An error occurred: {e}")
+        except Exception as e:
+            print(f"An error occurred: {e}")
 
 
 def download_flow():
@@ -268,6 +272,13 @@ def main():
 
     nwi_gagesII_download()
     # began at 1:02 pm
+    # began again at 2:55 (error handling was not correct)
+
+    # import glob
+    # path = 'C:/Users/aholt8450/Documents/Data/NWI_camels'
+    # shp_files = glob.glob(f"{path}/*.shp")
+    # num_files = len(shp_files)
+    # print(num_files)
 
     # SIGNATURE WORKFLOW
     # download_flow()
