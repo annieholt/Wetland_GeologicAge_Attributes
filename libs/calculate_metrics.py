@@ -122,12 +122,13 @@ def prep_nwi(nwi_gdf):
         (nwi_gdf_subset['wet_type'] == 'Freshwater Forested/Shrub Wetland'),
         (nwi_gdf_subset['wet_type'] == 'Freshwater Pond'),
         (nwi_gdf_subset['wet_type'] == 'Lake'),
+        (nwi_gdf_subset['wet_type'] == 'Lakes'),
         (nwi_gdf_subset['wet_type'] == 'Riverine'),
         (nwi_gdf_subset['wet_type'] == 'Other')
     ]
     # using on above type conditions, sort into more general wetland class categories
     # based on methods in Gnann et al., 2021
-    type_results = ['est', 'est', 'fresh', 'fresh', 'fresh', 'lake', 'other', 'other']
+    type_results = ['est', 'est', 'fresh', 'fresh', 'fresh', 'lake','lake', 'other', 'other']
 
     # Create a new column based on above assignments
     nwi_gdf_subset['wet_class'] = numpy.select(type_conditions, type_results)
