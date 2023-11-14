@@ -176,18 +176,21 @@ def download_flow():
 
     # downloading flow data and saving in format required for TOSSH toolbox processing
     for num in range(len(siteids_list)):
-        siteid = siteids_list[num]
-        print(siteid)
-        out_dir_1 = "E:/SDSU_GEOG/Thesis/Data/Gages-II/usgs_streamflow_2"
-        # out_dir_1 = "C:/Users/aholt8450/Documents/Data/usgs_streamflow"
-        out_dir_2 = "E:/SDSU_GEOG/Thesis/Data/Gages-II/usgs_streamflow_2/mm_day"
-        # out_dir_2 = "C:/Users/aholt8450/Documents/Data/usgs_streamflow/mm_day"
+        try:
+            siteid = siteids_list[num]
+            print(siteid)
+            out_dir_1 = "E:/SDSU_GEOG/Thesis/Data/Gages-II/usgs_streamflow_2"
+            # out_dir_1 = "C:/Users/aholt8450/Documents/Data/usgs_streamflow"
+            out_dir_2 = "E:/SDSU_GEOG/Thesis/Data/Gages-II/usgs_streamflow_2/mm_day"
+            # out_dir_2 = "C:/Users/aholt8450/Documents/Data/usgs_streamflow/mm_day"
 
-        drain_area = usgs_drain_area_download_api(siteid=siteid)
-        print(drain_area)
-        flow_cfs_df = usgs_daily_download_api(siteid=siteid, out_dir=out_dir_1, save=True)
-        flow_mm_day_df = usgs_daily_prep(siteid=siteid, drain_area=drain_area,
-                                         flow_cfs_df=flow_cfs_df, out_dir=out_dir_2, save=True)
+            drain_area = usgs_drain_area_download_api(siteid=siteid)
+            print(drain_area)
+            flow_cfs_df = usgs_daily_download_api(siteid=siteid, out_dir=out_dir_1, save=True)
+            flow_mm_day_df = usgs_daily_prep(siteid=siteid, drain_area=drain_area,
+                                             flow_cfs_df=flow_cfs_df, out_dir=out_dir_2, save=True)
+        except Exception as e:
+            print(f"An error occurred: {e}")
 
 
 def main():
