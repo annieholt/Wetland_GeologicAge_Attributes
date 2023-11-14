@@ -7,6 +7,8 @@
 # importing module libraries
 # from libs.dataretrieval_api import *
 import multiprocessing
+import re
+
 from libs.calculate_metrics import *
 from libs.dataretrieval_nwis import *
 import os
@@ -146,6 +148,74 @@ def nwi_metrics_workflow_camels():
     result_gdf.to_file("E:/SDSU_GEOG/Thesis/Data/NWI_outputs/Shapefiles/nwi_camels_metrics.shp")
 
 
+def nwi_gagesII_download():
+    try:
+        # iterate data retrieval for each reference gages II watershed
+        ref_sheds = geopandas.read_file(
+            'C:/Users/aholt8450/Documents/Data/Gages-II/boundaries-shapefiles-by-aggeco/bas_ref_all.shp')
+
+        ref_sheds_2 = ref_sheds.loc[:, ['GAGE_ID', 'geometry']]
+        ref_sheds_2 = ref_sheds_2.rename(columns={'GAGE_ID': 'gauge_id'})
+        ref_sheds_2['gauge_id'] = ref_sheds_2['gauge_id'].astype(str).str.zfill(8)
+        # print(ref_sheds_2)
+
+        # want to just do the reference watersheds we also have flow data for, for now
+        # so reading in names of flow data files, and using the gage IDs to filter the sheds
+
+        flow_files = os.listdir('C:/Users/aholt8450/Documents/Data/Gages-II/usgs_streamflow_2/mm_day')
+        # print(flow_files)
+        ids_list = []
+
+        for name in flow_files:
+            gauge_id = name.split('.csv')[0]
+            ids_list.append(gauge_id)
+
+        # print(ids_list)
+
+        # only get NWI data for the new reference watersheds (not including those in camels or failed downloads)
+        ref_sheds_filtered = ref_sheds_2[ref_sheds_2['gauge_id'].isin(ids_list)]
+        # print(ref_sheds_filtered)
+
+        # empty list for watershed data
+        ref_sheds_list = []
+
+        # Loop through each row in the original GeoDataFrame
+        for index, row in ref_sheds_filtered.iterrows():
+            # Create a new GeoDataFrame with a single row
+            single_row_gdf = ref_sheds_filtered.iloc[[index]]
+            # print(single_row_gdf)
+
+            # Append it to the list
+            ref_sheds_list.append(single_row_gdf)
+
+            # import nwi data from geodatabase
+            # note that this is equivalent to intersection rather than clip, so sometimes the features extend
+            geodatabase_path = "C:/Users/aholt8450/Documents/ArcGIS/Projects/NWI_testing/NWI_testing.gdb"
+            layer_name = 'Wetlands_Merge_CONUS'
+            out_dir = 'C:/Users/aholt8450/Documents/Data/NWI_gagesII'
+
+            out_gdf = geopandas.read_file(geodatabase_path, driver='FileGDB', layer=layer_name, mask=single_row_gdf)
+            # print(out_gdf)
+            out_gdf = out_gdf.reset_index(drop=True)
+            # print(out_gdf)
+
+            # getting watershed id
+            gauge_id = single_row_gdf['gauge_id'].iloc[0]
+            print(gauge_id)
+            # output path for data
+            file_name = gauge_id + '_nwi_wetlands.shp'
+            # print(file_name)
+            # create pull file path
+            file_path = os.path.join(out_dir, file_name)
+            print(file_path)
+            # save the GeoDataFrame as a shapefile
+            out_gdf.to_file(file_path, index=False)
+            print(f"Downloaded data and saved as {file_path}")
+
+    except Exception as e:
+        print(f"An error occurred: {e}")
+
+
 def download_flow():
     # using CAMELS watersheds
     camels_ids = pandas.read_csv('E:/SDSU_GEOG/Thesis/Data/CAMELS/camels_name.txt', delimiter=';')
@@ -196,8 +266,11 @@ def download_flow():
 def main():
     # nwi_metrics_workflow_camels()
 
+    nwi_gagesII_download()
+    # began at 1:02 pm
+
     # SIGNATURE WORKFLOW
-    download_flow()
+    # download_flow()
 
 
 # Press the green button in the gutter to run the script.
