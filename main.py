@@ -13,6 +13,7 @@ from libs.calculate_metrics import *
 from libs.dataretrieval_nwis import *
 import os
 
+
 # def nwi_iter(shed_gdf):
 #     try:
 #         # data retrieval
@@ -220,6 +221,78 @@ def nwi_gagesII_download():
             print(f"An error occurred: {e}")
 
 
+def nwi_metrics_workflow_gagesII():
+    # prep nwi data and run metrics calculation for each camels watershed
+    # ref_sheds = geopandas.read_file(
+    #     'C:/Users/aholt8450/Documents/Data/Gages-II/boundaries-shapefiles-by-aggeco/bas_ref_all.shp')
+
+    ref_sheds = geopandas.read_file('E:/SDSU_GEOG/Thesis/Data/Gages-II/boundaries-shapefiles-by-aggeco/bas_ref_all.shp')
+
+    ref_sheds_2 = ref_sheds.loc[:, ['GAGE_ID', 'geometry']]
+    ref_sheds_2 = ref_sheds_2.rename(columns={'GAGE_ID': 'gauge_id'})
+    ref_sheds_2['gauge_id'] = ref_sheds_2['gauge_id'].astype(str).str.zfill(8)
+
+    # flow_files = os.listdir('C:/Users/aholt8450/Documents/Data/Gages-II/usgs_streamflow_2/mm_day')
+    flow_files = os.listdir('E:/SDSU_GEOG/Thesis/Data/Gages-II/usgs_streamflow_2/mm_day')
+    # print(flow_files)
+    ids_list = []
+
+    for name in flow_files:
+        gauge_id = name.split('.csv')[0]
+        ids_list.append(gauge_id)
+
+    # print(ids_list)
+
+    # only get NWI data for the new reference watersheds (not including those in camels or failed downloads)
+    ref_sheds_filtered = ref_sheds_2[ref_sheds_2['gauge_id'].isin(ids_list)]
+
+    # Initialize an empty list to store the results
+    results = []
+
+    for index, row in ref_sheds_filtered.iterrows():
+
+        try:
+            # create a geodataframe for current watershed
+            single_row_gdf = ref_sheds_filtered.iloc[[index]]
+
+            shed_gdf = single_row_gdf
+
+            nwi_path = 'E:/SDSU_GEOG/Thesis/Data/NWI_gagesII'
+            gauge_id = shed_gdf['gauge_id'].iloc[0]
+            file_name = gauge_id + '_nwi_wetlands.shp'
+            # print(file_name)
+            # create pull file path
+            file_path = os.path.join(nwi_path, file_name)
+            print(file_path)
+            nwi_gdf = geopandas.read_file(file_path)
+            # print(nwi_gdf)
+
+            # metrics processing; below function order is required
+            shed_area = calc_area_shed(shed_gdf)
+            nwi_prep = prep_nwi(nwi_gdf)
+            nwi_shed_join = wetlands_in_shed(nwi_prep, shed_area)
+            nwi_area = calc_area_nwi(nwi_shed_join)
+            nwi_metrics = calc_wetland_metrics(nwi_area, shed_area)
+
+            # export just in case for now
+            file_name_export = gauge_id + '_wetland_metrics.shp'
+            # create pull file path
+            file_path_export = os.path.join('E:/SDSU_GEOG/Thesis/Data/NWI_outputs/Shapefiles/by_id_gagesII',
+                                            file_name_export)
+            print(file_path_export)
+            nwi_metrics.to_file(file_path_export, index=False)
+
+            # add to results
+            results.append(nwi_metrics)
+
+        except Exception as e:
+            print(f"An error occurred: {e}")
+
+    result_gdf = pandas.concat(results, ignore_index=True)
+    # print(result_gdf)
+    result_gdf.to_file("E:/SDSU_GEOG/Thesis/Data/NWI_outputs/Shapefiles/nwi_gagesII_ref_metrics.shp")
+
+
 def download_flow():
     # using CAMELS watersheds
     camels_ids = pandas.read_csv('E:/SDSU_GEOG/Thesis/Data/CAMELS/camels_name.txt', delimiter=';')
@@ -270,9 +343,9 @@ def download_flow():
 def main():
     # nwi_metrics_workflow_camels()
 
-    nwi_gagesII_download()
-    # began at 1:02 pm
-    # began again at 2:55 (error handling was not correct)
+    # nwi_gagesII_download()
+
+    nwi_metrics_workflow_gagesII()
 
     # import glob
     # path = 'C:/Users/aholt8450/Documents/Data/NWI_camels'
