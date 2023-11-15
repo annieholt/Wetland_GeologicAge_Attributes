@@ -128,7 +128,7 @@ def prep_nwi(nwi_gdf):
     ]
     # using on above type conditions, sort into more general wetland class categories
     # based on methods in Gnann et al., 2021
-    type_results = ['est', 'est', 'fresh', 'fresh', 'fresh', 'lake','lake', 'other', 'other']
+    type_results = ['est', 'est', 'fresh', 'fresh', 'fresh', 'lake', 'lake', 'other', 'other']
 
     # Create a new column based on above assignments
     nwi_gdf_subset['wet_class'] = numpy.select(type_conditions, type_results)
