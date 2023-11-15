@@ -157,7 +157,7 @@ def nwi_gagesII_download():
 
     ref_sheds_2 = ref_sheds.loc[:, ['GAGE_ID', 'geometry']]
     ref_sheds_2 = ref_sheds_2.rename(columns={'GAGE_ID': 'gauge_id'})
-    ref_sheds_2['gauge_id'] = ref_sheds_2['gauge_id'].astype(str).str.zfill(8)
+    # ref_sheds_2['gauge_id'] = ref_sheds_2['gauge_id'].astype(str).str.zfill(8)
     # print(ref_sheds_2)
 
     # want to just do the reference watersheds we also have flow data for, for now
@@ -223,17 +223,17 @@ def nwi_gagesII_download():
 
 def nwi_metrics_workflow_gagesII():
     # prep nwi data and run metrics calculation for each camels watershed
-    # ref_sheds = geopandas.read_file(
-    #     'C:/Users/aholt8450/Documents/Data/Gages-II/boundaries-shapefiles-by-aggeco/bas_ref_all.shp')
+    ref_sheds = geopandas.read_file(
+        'C:/Users/aholt8450/Documents/Data/Gages-II/boundaries-shapefiles-by-aggeco/bas_ref_all_conus.shp')
 
-    ref_sheds = geopandas.read_file('E:/SDSU_GEOG/Thesis/Data/Gages-II/boundaries-shapefiles-by-aggeco/bas_ref_all.shp')
+    # ref_sheds = geopandas.read_file('E:/SDSU_GEOG/Thesis/Data/Gages-II/boundaries-shapefiles-by-aggeco/bas_ref_all.shp')
 
     ref_sheds_2 = ref_sheds.loc[:, ['GAGE_ID', 'geometry']]
     ref_sheds_2 = ref_sheds_2.rename(columns={'GAGE_ID': 'gauge_id'})
-    ref_sheds_2['gauge_id'] = ref_sheds_2['gauge_id'].astype(str).str.zfill(8)
+    # ref_sheds_2['gauge_id'] = ref_sheds_2['gauge_id'].astype(str).str.zfill(8)
 
-    # flow_files = os.listdir('C:/Users/aholt8450/Documents/Data/Gages-II/usgs_streamflow_2/mm_day')
-    flow_files = os.listdir('E:/SDSU_GEOG/Thesis/Data/Gages-II/usgs_streamflow_2/mm_day')
+    flow_files = os.listdir('C:/Users/aholt8450/Documents/Data/Gages-II/usgs_streamflow_2/mm_day')
+    # flow_files = os.listdir('E:/SDSU_GEOG/Thesis/Data/Gages-II/usgs_streamflow_2/mm_day')
     # print(flow_files)
     ids_list = []
 
@@ -245,19 +245,23 @@ def nwi_metrics_workflow_gagesII():
 
     # only get NWI data for the new reference watersheds (not including those in camels or failed downloads)
     ref_sheds_filtered = ref_sheds_2[ref_sheds_2['gauge_id'].isin(ids_list)]
+    print(ref_sheds_filtered)
 
     # Initialize an empty list to store the results
     results = []
 
-    for index, row in ref_sheds_filtered.iterrows():
-
+    # Loop through each row in the original GeoDataFrame
+    for row in ref_sheds_filtered.itertuples(index=True, name='RowData'):
         try:
-            # create a geodataframe for current watershed
-            single_row_gdf = ref_sheds_filtered.iloc[[index]]
+            # Create a new GeoDataFrame with a single row
+            single_row_gdf = geopandas.GeoDataFrame([row], geometry='geometry', crs=ref_sheds_filtered.crs)
+            # single_row_gdf = ref_sheds_filtered.iloc[[index]]
 
             shed_gdf = single_row_gdf
+            # print(shed_gdf)
 
-            nwi_path = 'E:/SDSU_GEOG/Thesis/Data/NWI_gagesII'
+            # nwi_path = 'E:/SDSU_GEOG/Thesis/Data/NWI_gagesII'
+            nwi_path = 'C:/Users/aholt8450/Documents/Data/NWI_gagesII'
             gauge_id = shed_gdf['gauge_id'].iloc[0]
             file_name = gauge_id + '_nwi_wetlands.shp'
             # print(file_name)
@@ -277,7 +281,9 @@ def nwi_metrics_workflow_gagesII():
             # export just in case for now
             file_name_export = gauge_id + '_wetland_metrics.shp'
             # create pull file path
-            file_path_export = os.path.join('E:/SDSU_GEOG/Thesis/Data/NWI_outputs/Shapefiles/by_id_gagesII',
+            # file_path_export = os.path.join('E:/SDSU_GEOG/Thesis/Data/NWI_outputs/Shapefiles/by_id_gagesII',
+            #                                 file_name_export)
+            file_path_export = os.path.join('C:/Users/aholt8450/Documents/Data/NWI_outputs/by_id_gagesII',
                                             file_name_export)
             print(file_path_export)
             nwi_metrics.to_file(file_path_export, index=False)
@@ -290,7 +296,8 @@ def nwi_metrics_workflow_gagesII():
 
     result_gdf = pandas.concat(results, ignore_index=True)
     # print(result_gdf)
-    result_gdf.to_file("E:/SDSU_GEOG/Thesis/Data/NWI_outputs/Shapefiles/nwi_gagesII_ref_metrics.shp")
+    # result_gdf.to_file("E:/SDSU_GEOG/Thesis/Data/NWI_outputs/Shapefiles/nwi_gagesII_ref_metrics.shp")
+    result_gdf.to_file("C:/Users/aholt8450/Documents/Data/NWI_outputs/nwi_gagesII_ref_metrics_new.shp")
 
 
 def download_flow():
