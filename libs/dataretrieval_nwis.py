@@ -197,3 +197,11 @@ def usgs_daily_prep(siteid, flow_cfs_df, drain_area, out_dir, save=False):
 # #                                   out_dir="C:/Users/holta/Documents", save=True)
 # test_df_prepped = usgs_daily_prep(siteid="03049646", drain_area=test_out, flow_cfs_df=test_df,
 #                                   out_dir="C:/Users/aholt8450/Documents/Data/usgs_streamflow/mm_day", save=True)
+
+# test_flow = pandas.read_csv('E:/SDSU_GEOG/Thesis/Data/Gages-II/usgs_streamflow_2/mm_day/01021470.csv')
+# print(test_flow)
+#
+# test_flow.replace('', pandas.NA, inplace=True)
+# # Convert columns to numeric (optional)
+# test_flow['Column1'] = pandas.to_numeric(test_flow['q_mm_day'], errors='coerce')
+print(test_flow)
