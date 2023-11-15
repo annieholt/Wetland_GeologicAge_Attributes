@@ -204,4 +204,4 @@ def usgs_daily_prep(siteid, flow_cfs_df, drain_area, out_dir, save=False):
 # test_flow.replace('', pandas.NA, inplace=True)
 # # Convert columns to numeric (optional)
 # test_flow['Column1'] = pandas.to_numeric(test_flow['q_mm_day'], errors='coerce')
-print(test_flow)
+# print(test_flow)
