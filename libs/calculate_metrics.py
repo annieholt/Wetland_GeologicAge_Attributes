@@ -224,3 +224,45 @@ def calc_wetland_metrics(nwi_gdf, shed_gdf):
 # nwi_metrics = calc_wetland_metrics(nwi_area, shed_area)
 # print(nwi_metrics)
 
+
+
+
+# # prep nwi data and run metrics calculation for each camels watershed
+# import os
+# ref_sheds = geopandas.read_file(
+#     'C:/Users/aholt8450/Documents/Data/Gages-II/boundaries-shapefiles-by-aggeco/bas_ref_all_conus.shp')
+#
+# ref_sheds_2 = ref_sheds.loc[:, ['GAGE_ID', 'geometry']]
+# ref_sheds_2 = ref_sheds_2.rename(columns={'GAGE_ID': 'gauge_id'})
+# # ref_sheds_2['gauge_id'] = ref_sheds_2['gauge_id'].astype(str).str.zfill(8)
+#
+# flow_files = os.listdir('C:/Users/aholt8450/Documents/Data/Gages-II/usgs_streamflow_2/mm_day')
+# ids_list = []
+#
+# for name in flow_files:
+#     gauge_id = name.split('.csv')[0]
+#     ids_list.append(gauge_id)
+# # print(ids_list)
+#
+# # only get NWI data for the new reference watersheds (not including those in camels or failed downloads)
+# ref_sheds_filtered = ref_sheds_2[ref_sheds_2['gauge_id'].isin(ids_list)]
+# # print(ref_sheds_filtered)
+# shed_gdf = ref_sheds_filtered.loc[ref_sheds_filtered['gauge_id'] == '01029200']
+# # print(shed_gdf)
+#
+# nwi_path = 'C:/Users/aholt8450/Documents/Data/NWI_gagesII'
+# gauge_id = shed_gdf['gauge_id'].iloc[0]
+# file_name = gauge_id + '_nwi_wetlands.shp'
+# file_path = os.path.join(nwi_path, file_name)
+# print(file_path)
+# nwi_gdf = geopandas.read_file(file_path)
+# print(nwi_gdf)
+# # metrics processing; below function order is required
+# shed_area = calc_area_shed(shed_gdf)
+# nwi_prep = prep_nwi(nwi_gdf)
+# print(nwi_prep)
+# nwi_shed_join = wetlands_in_shed(nwi_prep, shed_area)
+# print(nwi_shed_join)
+# nwi_area = calc_area_nwi(nwi_shed_join)
+# nwi_metrics = calc_wetland_metrics(nwi_area, shed_area)
+# print(nwi_metrics)
