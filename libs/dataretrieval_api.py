@@ -381,13 +381,13 @@ def usgs_daily_prep(siteid, flow_cfs_df, drain_area, out_dir, save=False):
     return flow_df_final
 
 
-# testing functions, on one USGS site
-test_out = usgs_drain_area_download_api(siteid="02322800")
+# # testing functions, on one USGS site
+# test_out = usgs_drain_area_download_api(siteid="02322800")
+# # test_df = usgs_daily_download_api(siteid="02322800",
+# #                                   out_dir="C:/Users/holta/Documents/ArcGIS_Projects/wetland_metrics/Data", save=False)
 # test_df = usgs_daily_download_api(siteid="02322800",
-#                                   out_dir="C:/Users/holta/Documents/ArcGIS_Projects/wetland_metrics/Data", save=False)
-test_df = usgs_daily_download_api(siteid="02322800",
-                                  out_dir="C:/Users/aholt8450/Documents/Data/Gages_II", save=True)
+#                                   out_dir="C:/Users/aholt8450/Documents/Data/Gages_II", save=True)
+# # test_df_prepped = usgs_daily_prep(siteid="02322800", drain_area=test_out, flow_cfs_df=test_df,
+# #                                   out_dir="C:/Users/holta/Documents", save=True)
 # test_df_prepped = usgs_daily_prep(siteid="02322800", drain_area=test_out, flow_cfs_df=test_df,
-#                                   out_dir="C:/Users/holta/Documents", save=True)
-test_df_prepped = usgs_daily_prep(siteid="02322800", drain_area=test_out, flow_cfs_df=test_df,
-                                  out_dir="C:/Users/aholt8450/Documents/Data/Gages_II_prepped", save=True)
+#                                   out_dir="C:/Users/aholt8450/Documents/Data/Gages_II_prepped", save=True)
