@@ -300,6 +300,125 @@ def nwi_metrics_workflow_gagesII():
     result_gdf.to_file("C:/Users/aholt8450/Documents/Data/NWI_outputs/nwi_gagesII_ref_metrics_new.shp")
 
 
+def giws_download():
+    ref_sheds = geopandas.read_file(
+        'E:/SDSU_GEOG/Thesis/Data/NWI_outputs/Shapefiles/Catchments/camels_gagesII_final_catchments.shp')
+
+    # ref_sheds_2 = ref_sheds.loc[:, ['gauge_id', 'geometry']]
+
+    # print(ref_sheds)
+
+    ref_sheds_list = []
+
+    # Loop through each row in the original GeoDataFrame
+    for row in ref_sheds.itertuples(index=True, name='RowData'):
+        try:
+            # Create a new GeoDataFrame with a single row
+            single_row_gdf = geopandas.GeoDataFrame([row], geometry='geometry', crs=ref_sheds.crs)
+            # print(single_row_gdf)
+
+            # Append it to the list
+            ref_sheds_list.append(single_row_gdf)
+
+            # import nwi data from geodatabase
+            # note that this is equivalent to intersection rather than clip, so sometimes the features extend
+            geodatabase_path = "E:/SDSU_GEOG/Thesis/Data/GIWs/GIWs_CONUS.gdb"
+            layer_name = 'GIWs_CONUS'
+            out_dir = 'E:/SDSU_GEOG/Thesis/Data/GIWs/GIWs_camels_gagesII'
+
+            out_gdf = geopandas.read_file(geodatabase_path, driver='FileGDB', layer=layer_name, mask=single_row_gdf)
+            # print(out_gdf)
+            out_gdf = out_gdf.reset_index(drop=True)
+            # print(out_gdf)
+
+            # getting watershed id
+            gauge_id = single_row_gdf['gauge_id'].iloc[0]
+            print(gauge_id)
+            # output path for data
+            file_name = gauge_id + '_giws.shp'
+            # print(file_name)
+            # create pull file path
+            file_path = os.path.join(out_dir, file_name)
+            print(file_path)
+            # save the GeoDataFrame as a shapefile
+            out_gdf.to_file(file_path, index=False)
+            print(f"Downloaded data and saved as {file_path}")
+
+        except Exception as e:
+            print(f"An error occurred: {e}")
+
+
+
+def giws_metrics_workflow():
+    # prep nwi data and run metrics calculation for each camels watershed
+    ref_sheds = geopandas.read_file(
+        'E:/SDSU_GEOG/Thesis/Data/NWI_outputs/Shapefiles/Catchments/camels_gagesII_final_catchments.shp')
+
+    # ref_sheds = geopandas.read_file('E:/SDSU_GEOG/Thesis/Data/Gages-II/boundaries-shapefiles-by-aggeco/bas_ref_all.shp')
+
+    ref_sheds_2 = ref_sheds.loc[:, ['gauge_id', 'geometry']]
+
+    # Initialize an empty list to store the results
+    results = []
+
+    # Loop through each row in the original GeoDataFrame
+    for row in ref_sheds_2.itertuples(index=True, name='RowData'):
+        try:
+            # Create a new GeoDataFrame with a single row
+            single_row_gdf = geopandas.GeoDataFrame([row], geometry='geometry', crs=ref_sheds_2.crs)
+            # single_row_gdf = ref_sheds_filtered.iloc[[index]]
+
+            shed_gdf = single_row_gdf
+            # print(shed_gdf)
+
+            giw_path = 'E:/SDSU_GEOG/Thesis/Data/GIWs/GIWs_camels_gagesII'
+            gauge_id = shed_gdf['gauge_id'].iloc[0]
+            file_name = gauge_id + '_giws.shp'
+            file_path = os.path.join(giw_path, file_name)
+            print(file_path)
+            giw_gdf = geopandas.read_file(file_path)
+            giw_gdf_2 = giw_gdf.loc[:, ['geometry']]
+            # print(giw_gdf_2)
+
+            # metrics processing; below function order is required
+            shed_area = calc_area_shed(shed_gdf)
+            # print(shed_area)
+            giw_shed_join = wetlands_in_shed(giw_gdf_2, shed_area)
+            giw_area = calc_area_nwi(giw_shed_join)
+
+            # Group by each watershed and wetland class and summarize the total area
+            shed_sum = giw_area.groupby(['gauge_id', 'shed_area'])['area_km2'].sum().reset_index()
+
+            # Calculate the area fraction
+            shed_sum['area_frac'] = shed_sum['area_km2'] / shed_sum['shed_area']
+            # print(shed_sum)
+
+            # Merge the summary data back to the watershed shapefile so the output is geodataset
+            shed_merge = shed_sum.merge(shed_gdf, on=['gauge_id'])
+            shed_final = shed_merge.loc[:, ['gauge_id', 'shed_area', 'area_km2', 'area_frac', 'geometry']]
+            print(shed_final)
+
+            # export just in case for now
+            file_name_export = gauge_id + '_giw_metrics.shp'
+            file_path_export = os.path.join('E:/SDSU_GEOG/Thesis/Data/GIWs/GWIs_outputs',
+                                            file_name_export)
+            print(file_path_export)
+            shed_final.to_file(file_path_export, index=False)
+
+            # add to results
+            results.append(shed_final)
+
+        except Exception as e:
+            print(f"An error occurred: {e}")
+
+    result_gdf = pandas.concat(results, ignore_index=True)
+    # print(result_gdf)
+    # result_gdf.to_file("E:/SDSU_GEOG/Thesis/Data/NWI_outputs/Shapefiles/nwi_gagesII_ref_metrics.shp")
+    result_gdf.to_file("C:/Users/aholt8450/Documents/Data/NWI_outputs/nwi_gagesII_ref_metrics_new.shp")
+
+
+
+
 def download_flow():
     # using CAMELS watersheds
     camels_ids = pandas.read_csv('E:/SDSU_GEOG/Thesis/Data/CAMELS/camels_name.txt', delimiter=';')
@@ -352,7 +471,13 @@ def main():
 
     # nwi_gagesII_download()
 
-    nwi_metrics_workflow_gagesII()
+    # nwi_metrics_workflow_gagesII()
+
+    # giws_download()
+
+    giws_metrics_workflow()
+
+
 
     # import glob
     # path = 'C:/Users/aholt8450/Documents/Data/NWI_camels'
