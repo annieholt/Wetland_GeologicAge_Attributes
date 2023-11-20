@@ -323,7 +323,7 @@ def giws_download():
             # import nwi data from geodatabase
             # note that this is equivalent to intersection rather than clip, so sometimes the features extend
             geodatabase_path = "E:/SDSU_GEOG/Thesis/Data/GIWs/GIWs_CONUS.gdb"
-            layer_name = 'GIWs_CONUS'
+            layer_name = 'GIWs_CONUS_final'
             out_dir = 'E:/SDSU_GEOG/Thesis/Data/GIWs/GIWs_camels_gagesII'
 
             out_gdf = geopandas.read_file(geodatabase_path, driver='FileGDB', layer=layer_name, mask=single_row_gdf)
@@ -394,9 +394,9 @@ def giws_metrics_workflow():
             # print(shed_sum)
 
             # Merge the summary data back to the watershed shapefile so the output is geodataset
-            shed_merge = shed_sum.merge(shed_gdf, on=['gauge_id'])
+            shed_merge = shed_gdf.merge(shed_sum, on=['gauge_id'])
             shed_final = shed_merge.loc[:, ['gauge_id', 'shed_area', 'area_km2', 'area_frac', 'geometry']]
-            print(shed_final)
+            # print(shed_final)
 
             # export just in case for now
             file_name_export = gauge_id + '_giw_metrics.shp'
@@ -413,8 +413,8 @@ def giws_metrics_workflow():
 
     result_gdf = pandas.concat(results, ignore_index=True)
     # print(result_gdf)
-    # result_gdf.to_file("E:/SDSU_GEOG/Thesis/Data/NWI_outputs/Shapefiles/nwi_gagesII_ref_metrics.shp")
-    result_gdf.to_file("C:/Users/aholt8450/Documents/Data/NWI_outputs/nwi_gagesII_ref_metrics_new.shp")
+    result_gdf.to_file("E:/SDSU_GEOG/Thesis/Data/GWIs/giws_metrics.shp")
+    # result_gdf.to_file("C:/Users/aholt8450/Documents/Data/NWI_outputs/nwi_gagesII_ref_metrics_new.shp")
 
 
 
