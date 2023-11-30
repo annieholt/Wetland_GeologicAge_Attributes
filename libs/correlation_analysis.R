@@ -135,14 +135,24 @@ cat("P-value:", cor_wet$p.value, "\n")
 
 
 corr_test = nwi_sigs_2 %>% 
-  select(fresh_no_giw, BFI, Recession_a_Seasonality, BaseflowRecessionK, First_Recession_Slope, Mid_Recession_Slope,
+  select(area_frac, BFI, Recession_a_Seasonality, BaseflowRecessionK, First_Recession_Slope, Mid_Recession_Slope,
          MRC_num_segments, VariabilityIndex, RecessionParameters_a, RecessionParameters_b, RecessionParameters_c) %>% 
   as.data.frame() %>% 
   correlate(method = "spearman") %>% 
-  focus(fresh_no_giw) %>% 
-  mutate(term_2 = factor(term, levels = term[order(fresh_no_giw)]))
+  focus(area_frac) %>% 
+  mutate(term_2 = factor(term, levels = term[order(area_frac)]))
 
 
+
+corr_test_subregion = nwi_sigs_2 %>% 
+  filter(NA_L1KEY == "5  NORTHERN FORESTS") %>% 
+  select(area_frac, BFI, Recession_a_Seasonality, BaseflowRecessionK, First_Recession_Slope, Mid_Recession_Slope,
+         MRC_num_segments, VariabilityIndex, RecessionParameters_a, RecessionParameters_b, RecessionParameters_c) %>% 
+  as.data.frame() %>% 
+  correlate(method = "spearman") %>% 
+  focus(area_frac) %>% 
+  mutate(term_2 = factor(term, levels = term[order(area_frac)]))
+  
 
 # ggplot(corr_test, aes(x = term_2, y = fresh_no_giw)) +
 #   geom_bar(stat = "identity", fill = "skyblue", color = "black") +
@@ -160,17 +170,17 @@ corr_test = nwi_sigs_2 %>%
 
 
 # Create ggplot with colored and sized dots
-ggplot(corr_test, aes(x = term, y = 1, color = fresh_no_giw, size = abs(fresh_no_giw))) +
+ggplot(corr_test_subregion, aes(x = term, y = 1, color = area_frac, size = abs(area_frac))) +
   geom_point() +
-  scale_color_gradient2(low = "red", mid = "white", high = "blue", 
-                        midpoint = mean(corr_test$fresh_no_giw), name = "Spearman's Rho",
-                        limits = c(-0.3, 0.3)) +
+  scale_color_gradient2(low = "red", mid = "grey", high = "blue", 
+                        midpoint = mean(corr_test_subregion$area_frac), name = "Spearman's Rho",
+                        limits = c(-1, 1)) +
   scale_size(range = c(2, 10)) +  # Adjust the overall size scale
   labs(
     y = NULL,  # No y-axis label
     x = NULL,
   ) +
-  ggtitle("Correlations with Non-Isolated Wetland Area Fraction") +  # Add plot title
+  ggtitle("Correlations with Isolated Wetland Area Fraction") +  # Add plot title
   theme_minimal() +                    # Use a minimal theme
   theme(
     plot.title = element_text(size=12),
@@ -187,7 +197,7 @@ ggplot(corr_test, aes(x = term, y = 1, color = fresh_no_giw, size = abs(fresh_no
   coord_cartesian(ylim = c(1, 1))
 
 
-# ggsave("E:/SDSU_GEOG/Thesis/Data/Signatures/Figures/giw_spearmans.png", width = 6, height = 3, dpi = 300,bg = "white")
+ggsave("E:/SDSU_GEOG/Thesis/Data/Signatures/Figures/fresh_no_giw_spearmans_northeast.png", width = 6, height = 3, dpi = 300,bg = "white")
 
 
 
@@ -195,23 +205,23 @@ ggplot(corr_test, aes(x = term, y = 1, color = fresh_no_giw, size = abs(fresh_no
 #### camels correlations ####
 
 corr_test_camels = nwi_sigs_camels %>% 
-  select(-geometry, -gauge_id, -gauge_lon, -gauge_lat, -fresh_no_giw) %>% 
+  select(-geometry, -gauge_id, -gauge_lon, -gauge_lat, -area_frac) %>% 
   as.data.frame() %>% 
   correlate(method = "spearman") %>% 
-  focus(area_frac) %>% 
-  mutate(term_2 = factor(term, levels = term[order(area_frac)]))
+  focus(fresh_no_giw) %>% 
+  mutate(term_2 = factor(term, levels = term[order(fresh_no_giw)]))
 
-ggplot(corr_test_camels, aes(x = term, y = 1, color = area_frac, size = abs(area_frac))) +
+ggplot(corr_test_camels, aes(x = term, y = 1, color = fresh_no_giw, size = abs(fresh_no_giw))) +
   geom_point() +
-  scale_color_gradient2(low = "red", mid = "white", high = "blue", 
-                        midpoint = mean(corr_test_camels$area_frac), name = "Spearman's Rho",
-                        limits = c(-0.24, 0.2)) +
+  scale_color_gradient2(low = "red", mid = "grey", high = "blue", 
+                        midpoint = mean(corr_test_camels$fresh_no_giw), name = "Spearman's Rho",
+                        limits = c(-1, 1)) +
   scale_size(range = c(2, 14)) +  # Adjust the overall size scale
   labs(
     y = NULL,  # No y-axis label
     x = NULL,
   ) +
-  ggtitle("Correlations with Isolated Wetland Area Fraction (CAMELS only)") +  # Add plot title
+  ggtitle("Correlations with Non-Isolated Wetland Area Fraction (CAMELS only)") +  # Add plot title
   theme_minimal() +                    # Use a minimal theme
   theme(
     plot.title = element_text(size=12),
@@ -227,7 +237,7 @@ ggplot(corr_test_camels, aes(x = term, y = 1, color = area_frac, size = abs(area
   guides(size = FALSE)+
   coord_cartesian(ylim = c(1, 1))
 
-# ggsave("E:/SDSU_GEOG/Thesis/Data/Signatures/Figures/giw_camels_spearmans.png", width = 8, height = 3, dpi = 300,bg = "white")
+ggsave("E:/SDSU_GEOG/Thesis/Data/Signatures/Figures/fresh_no_giw_camels_spearmans.png", width = 8, height = 3, dpi = 300,bg = "white")
 
 
 
@@ -374,7 +384,7 @@ ggsave("E:/SDSU_GEOG/Thesis/Data/Signatures/Figures/sig_distribution_giw_extende
 #### Statistical testing ####
 
 nwi_sigs_test <- nwi_sigs_categories %>% 
-  filter(NA_L1KEY == "8  EASTERN TEMPERATE FORESTS") %>%
+  filter(NA_L1KEY == "5  NORTHERN FORESTS") %>%
   select(gauge_id, fresh, VariabilityIndex) %>%
   drop_na()
 cor_result <- cor.test(nwi_sigs_test$fresh, nwi_sigs_test$VariabilityIndex, method = "spearman", exact = FALSE)
