@@ -12,7 +12,8 @@ library(R.matlab)
 #### DATA DOWNLOAD ####
 
 # Try the code below with the site.code here, then use the site code for your watershed.
-site.code = "01607500"  #  The USGS stream gage code
+# site.code = "01607500"  #  The USGS stream gage code
+site.code = "04122500"
 
 what.data = whatNWISdata(siteNumber = as.character(site.code))
 
