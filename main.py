@@ -76,7 +76,7 @@ def nwi_camels_download():
             # output path for data
             file_name = gauge_id + '_nwi_wetlands.shp'
             # print(file_name)
-            # create pull file path
+            # create full file path
             file_path = os.path.join(out_dir, file_name)
             print(file_path)
             # save the GeoDataFrame as a shapefile
@@ -274,8 +274,8 @@ def nwi_metrics_workflow_gagesII():
             # metrics processing; below function order is required
             shed_area = calc_area_shed(shed_gdf)
             nwi_prep = prep_nwi(nwi_gdf)
-            nwi_shed_join = wetlands_in_shed(nwi_prep, shed_area)
-            nwi_area = calc_area_nwi(nwi_shed_join)
+            nwi_shed_join = polygons_in_shed(nwi_prep, shed_area)
+            nwi_area = calc_area_polygons(nwi_shed_join)
             nwi_metrics = calc_wetland_metrics(nwi_area, shed_area)
 
             # export just in case for now
@@ -383,8 +383,8 @@ def giws_metrics_workflow():
             # metrics processing; below function order is required
             shed_area = calc_area_shed(shed_gdf)
             # print(shed_area)
-            giw_shed_join = wetlands_in_shed(giw_gdf_2, shed_area)
-            giw_area = calc_area_nwi(giw_shed_join)
+            giw_shed_join = polygons_in_shed(giw_gdf_2, shed_area)
+            giw_area = calc_area_polygons(giw_shed_join)
 
             # Group by each watershed and wetland class and summarize the total area
             shed_sum = giw_area.groupby(['gauge_id', 'shed_area'])['area_km2'].sum().reset_index()
@@ -466,6 +466,61 @@ def download_flow():
             print(f"An error occurred: {e}")
 
 
+
+def sgmc_camels_download():
+    # iterate data retrieval for each camels watershed
+    # camels_sheds = geopandas.read_file('E:/SDSU_GEOG/Thesis/Data/CAMELS/basin_set_full_res/HCDN_nhru_final_671.shp')
+    camels_sheds = geopandas.read_file(
+        'E:/SDSU_GEOG/Thesis/Data/CAMELS/basin_set_full_res/HCDN_nhru_final_671.shp')
+
+    camels_sheds_2 = camels_sheds.loc[:, ['hru_id', 'geometry']]
+    camels_sheds_2 = camels_sheds_2.rename(columns={'hru_id': 'gauge_id'})
+    camels_sheds_2['gauge_id'] = camels_sheds_2['gauge_id'].astype(str).str.zfill(8)
+
+    # first, testing a smaller subset
+    # camels_sheds_test = camels_sheds_2.head(10).copy()
+    # print(camels_sheds_test)
+
+    # empty list for watershed data
+    camels_sheds_list = []
+
+    # Loop through each row in the original GeoDataFrame
+    for index, row in camels_sheds_2.iterrows():
+        try:
+            # Create a new GeoDataFrame with a single row
+            single_row_gdf = camels_sheds_2.iloc[[index]]
+            # print(single_row_gdf)
+
+            # Append it to the list
+            camels_sheds_list.append(single_row_gdf)
+
+            # import nwi data from geodatabase
+            # note that this is equivalent to intersection rather than clip, so sometimes the features extend
+            geodatabase_path = "E:/SDSU_GEOG/Thesis/Data/Geology/SGMC_Geology.gdb"
+            layer_name = 'SGMC_Geology_Age'
+            out_dir = 'E:/SDSU_GEOG/Thesis/Data/Geology_outputs'
+
+            out_gdf = geopandas.read_file(geodatabase_path, driver='FileGDB', layer=layer_name, mask=single_row_gdf)
+            # print(out_gdf)
+            out_gdf = out_gdf.reset_index(drop=True)
+            # print(out_gdf)
+
+            # getting watershed id
+            gauge_id = single_row_gdf['gauge_id'].iloc[0]
+            print(gauge_id)
+            # output path for data
+            file_name = gauge_id + '_sgmc_geology.shp'
+            # print(file_name)
+            # create full file path
+            file_path = os.path.join(out_dir, file_name)
+            print(file_path)
+            # save the GeoDataFrame as a shapefile
+            out_gdf.to_file(file_path, index=False)
+            print(f"Downloaded data and saved as {file_path}")
+
+        except Exception as e:
+            print(f"An error occurred: {e}")
+
 def main():
     # nwi_metrics_workflow_camels()
 
@@ -475,7 +530,9 @@ def main():
 
     # giws_download()
 
-    giws_metrics_workflow()
+    # giws_metrics_workflow()
+
+    sgmc_camels_download()
 
 
 
