@@ -135,23 +135,35 @@ cat("P-value:", cor_wet$p.value, "\n")
 
 
 corr_test = nwi_sigs_2 %>% 
-  select(area_frac, BFI, Recession_a_Seasonality, BaseflowRecessionK, First_Recession_Slope, Mid_Recession_Slope,
+  select(fresh_no_giw, BFI, Recession_a_Seasonality, BaseflowRecessionK, First_Recession_Slope, Mid_Recession_Slope,
          MRC_num_segments, VariabilityIndex, RecessionParameters_a, RecessionParameters_b, RecessionParameters_c) %>% 
   as.data.frame() %>% 
   correlate(method = "spearman") %>% 
-  focus(area_frac) %>% 
-  mutate(term_2 = factor(term, levels = term[order(area_frac)]))
+  focus(fresh_no_giw) %>% 
+  mutate(term_2 = factor(term, levels = term[order(fresh_no_giw)]))
+
+
+
+
+cor_sigs <- cor.test(nwi_sigs_2$area_frac, nwi_sigs_2$VariabilityIndex, method = "spearman", exact = FALSE)
+
+# Print the correlation coefficient and p-value
+cat("Spearman rank correlation coefficient:", cor_sigs$estimate, "\n")
+cat("P-value:", cor_sigs$p.value, "\n")
+
+
+
 
 
 
 corr_test_subregion = nwi_sigs_2 %>% 
   filter(NA_L1KEY == "5  NORTHERN FORESTS") %>% 
-  select(area_frac, BFI, Recession_a_Seasonality, BaseflowRecessionK, First_Recession_Slope, Mid_Recession_Slope,
+  select(fresh_no_giw, BFI, Recession_a_Seasonality, BaseflowRecessionK, First_Recession_Slope, Mid_Recession_Slope,
          MRC_num_segments, VariabilityIndex, RecessionParameters_a, RecessionParameters_b, RecessionParameters_c) %>% 
   as.data.frame() %>% 
   correlate(method = "spearman") %>% 
-  focus(area_frac) %>% 
-  mutate(term_2 = factor(term, levels = term[order(area_frac)]))
+  focus(fresh_no_giw) %>% 
+  mutate(term_2 = factor(term, levels = term[order(fresh_no_giw)]))
   
 
 # ggplot(corr_test, aes(x = term_2, y = fresh_no_giw)) +
@@ -170,34 +182,34 @@ corr_test_subregion = nwi_sigs_2 %>%
 
 
 # Create ggplot with colored and sized dots
-ggplot(corr_test_subregion, aes(x = term, y = 1, color = area_frac, size = abs(area_frac))) +
+ggplot(corr_test, aes(x = term, y = 1, color = fresh_no_giw, size = abs(fresh_no_giw))) +
   geom_point() +
   scale_color_gradient2(low = "red", mid = "grey", high = "blue", 
-                        midpoint = mean(corr_test_subregion$area_frac), name = "Spearman's Rho",
-                        limits = c(-1, 1)) +
-  scale_size(range = c(2, 10)) +  # Adjust the overall size scale
+                        midpoint = mean(corr_test$fresh_no_giw), name = "Spearman's Rho",
+                        limits = c(-0.3, 0.3)) +
+  scale_size(range = c(6, 16)) +  # Adjust the overall size scale
   labs(
     y = NULL,  # No y-axis label
     x = NULL,
   ) +
-  ggtitle("Correlations with Isolated Wetland Area Fraction") +  # Add plot title
+  ggtitle("Correlations with Connected Wetland Area Fraction") +  # Add plot title
   theme_minimal() +                    # Use a minimal theme
   theme(
-    plot.title = element_text(size=12),
-    text = element_text(size = 12),   # Increase text (axis labels, title) size
+    plot.title = element_text(size=24),
+    text = element_text(size = 20),   # Increase text (axis labels, title) size
     axis.title = element_text(size = 14),  # Increase axis title sizehttp://127.0.0.1:42413/graphics/plot_zoom_png?width=619&height=258
     axis.text.x = element_text(angle = 45, hjust = 1),  # Rotate x-axis labels diagonally
     axis.text.y = element_blank(),  # Remove y-axis values
     legend.position = "left",  # Move legend to the left side
-    legend.title = element_text(size = 12),
-    legend.text = element_text(size = 12),  # Adjust legend text size
-    legend.key.size = unit(1, "lines")  # Adjust the size of the legend color key
+    legend.title = element_text(size = 20),
+    legend.text = element_text(size = 20),  # Adjust legend text size
+    legend.key.size = unit(2, "lines")  # Adjust the size of the legend color key
   ) +
   guides(size = FALSE)+
   coord_cartesian(ylim = c(1, 1))
 
 
-ggsave("E:/SDSU_GEOG/Thesis/Data/Signatures/Figures/fresh_no_giw_spearmans_northeast.png", width = 6, height = 3, dpi = 300,bg = "white")
+# ggsave("E:/SDSU_GEOG/Thesis/Data/Signatures/Figures/fresh_no_giw_spearmans.png", width = 10.5, height = 5, dpi = 300,bg = "white")
 
 
 
@@ -237,7 +249,7 @@ ggplot(corr_test_camels, aes(x = term, y = 1, color = fresh_no_giw, size = abs(f
   guides(size = FALSE)+
   coord_cartesian(ylim = c(1, 1))
 
-ggsave("E:/SDSU_GEOG/Thesis/Data/Signatures/Figures/fresh_no_giw_camels_spearmans.png", width = 8, height = 3, dpi = 300,bg = "white")
+# ggsave("E:/SDSU_GEOG/Thesis/Data/Signatures/Figures/fresh_no_giw_camels_spearmans.png", width = 8, height = 3, dpi = 300,bg = "white")
 
 
 
@@ -246,27 +258,27 @@ ggsave("E:/SDSU_GEOG/Thesis/Data/Signatures/Figures/fresh_no_giw_camels_spearman
 conus <- st_read('E:/SDSU_GEOG/Thesis/Data/US states/conus_states.shp')
 
 # Create a new sf object with points representing the centroids of the polygons
-centroids_sf <- st_centroid(nwi_sigs)
+centroids_sf <- st_centroid(nwi_metrics)
 
 # Plot the map with polygons represented as dots, colored by the variable
 ggplot() +
   geom_sf(data = conus, color = "white", fill = "grey") +  # Plot polygon boundaries, color by variable
-  geom_sf(data = centroids_sf, aes(fill = fresh_no_giw), shape = 21, color = "darkgrey", size = 4, alpha = 1) +  # Plot centroids as dots, color by variable
+  geom_sf(data = centroids_sf, aes(fill = area_frac), shape = 21, color = "darkgrey", size = 4, alpha = 1) +  # Plot centroids as dots, color by variable
   # scale_fill_distiller(direction=1)+
   # scale_fill_viridis_c()+
   scale_fill_distiller(palette = "YlGnBu", direction = 1, name = NULL)+
   # scale_fill_gradient(low = "white", high = "blue4") +  # Set color scale
-  ggtitle("Non-Isolated Wetland Area Fraction") +
+  ggtitle("Isolated Wetland Area Fraction") +
   theme_void()+
   theme(
-    plot.title = element_text(size = 15, hjust = 0.5),  # Adjust title size and centering
+    plot.title = element_text(size = 30, hjust = 0.5),  # Adjust title size and centering
     legend.key.size = unit(2, "lines"),  # Adjust the size of the legend keys
-    legend.title = element_text(size = 11),  # Adjust the size of the legend title
-    legend.text = element_text(size = 10),# Adjust the size of the legend text
+    legend.title = element_text(size = 24),  # Adjust the size of the legend title
+    legend.text = element_text(size = 24),# Adjust the size of the legend text
     legend.margin = margin(r = 10)
   )
 
-# ggsave("E:/SDSU_GEOG/Thesis/Data/Signatures/Figures/nwi_fresh_no_giw.png", width = 11, height = 6, dpi = 300,bg = "white")
+# ggsave("E:/SDSU_GEOG/Thesis/Data/Signatures/Figures/nwi_giw.png", width = 11, height = 6, dpi = 300,bg = "white")
 
 
 
@@ -356,7 +368,7 @@ ggplot(nwi_sigs_categories_long, aes(x = fresh_category, y = value, fill = fresh
 ggplot(nwi_sigs_categories_long, aes(x = value, color = giw_category)) +
   geom_density(lwd = 2, alpha = 0.7) +  # Adjust line thickness with lwd and transparency with alpha
   facet_wrap(~ signature, scales = "free", ncol = 2, strip.position = "bottom") +
-  scale_color_manual(values = c("class 1" = "yellow", "class 2" = "green", "class 3" = "blue"),
+  scale_color_manual(values = c("class 1" = "darkgrey", "class 2" = "orange", "class 3" = "purple"),
                      name = str_wrap("Percent Isolated Wetlands", width = 16),
                      labels = c("0-1%", "1-5%", "> 5%")) +  # Specify specific colors
   # ggtitle("Kernel Density Plot with Separate Lines for Different Categories") +
@@ -367,13 +379,13 @@ ggplot(nwi_sigs_categories_long, aes(x = value, color = giw_category)) +
     panel.grid.major = element_blank(),
     panel.grid.minor = element_blank(),
     axis.line = element_line(),
-    strip.text = element_text(size = 14, margin = margin(t = 5, b = 5)),  # Increase label size
+    strip.text = element_text(size = 24, margin = margin(t = 5, b = 5)),  # Increase label size
     strip.background = element_blank(),
     strip.placement = "outside",
     axis.text.x = element_text(vjust = 0, size = 16),  # Increase X-axis label size
     axis.text.y = element_blank(),
-    legend.text = element_text(size = 16),  # Increase legend text size
-    legend.title = element_text(size = 18)  # Increase legend title size
+    legend.text = element_text(size = 26),  # Increase legend text size
+    legend.title = element_text(size = 26)  # Increase legend title size
   )
 
 ggsave("E:/SDSU_GEOG/Thesis/Data/Signatures/Figures/sig_distribution_giw_extended_2.png", width = 11, height = 8, dpi = 300,bg = "white")
