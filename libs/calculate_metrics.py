@@ -7,7 +7,7 @@ import geopandas, pandas, numpy
 # Calculate the total area of each polygon feature (reproject to equals area projection and calculate)
 # Can be applied to wetland and watershed shapefiles
 
-def calc_area_nwi(input_gdf):
+def calc_area_polygons(input_gdf):
     """
     :param input_gdf: Input GeoDataFrame. Should be polygon geometry type.
     :return: a GeoDataFrame.
@@ -57,21 +57,21 @@ def calc_area_shed(input_gdf):
         return None
 
 
-# retain only wetland polygons in provided watershed polygon(s)
-# this is optional in the workflow, but allows for additional NWI data reduction
+# retain only wetland or geology polygons in provided watershed polygon(s)
+# also allows for additional data reduction
 # for example, if downloaded California NWI data but only needed wetlands for 8 specified California watersheds
-def wetlands_in_shed(nwi_gdf, shed_gdf):
+def polygons_in_shed(attrib_gdf, shed_gdf):
     """
-    Function to retain only the wetland polygons with in the provided watershed polygon and join the wetland
-    and watershed shapefile attributes.
-    :param nwi_gdf: GeoDataFrame of NWI data, should be polygon geometry.
+    Function to retain only the attribute data polygons with in the provided watershed polygon and join the wetland/
+    geolgy and watershed shapefile attributes.
+    :param attrib_gdf: GeoDataFrame of data such as NWI or SGMC data, should be polygon geometry.
     :param shed_gdf: GeoDataFrame of Watershed(s), should be polygon geometry.
-    :return: GeoDataFrame of NWI wetlands in provided watersheds, with joined attributes from both input datasets.
+    :return: GeoDataFrame of the features in provided watersheds, with joined attributes from both input datasets.
     """
     try:
         # Reproject both GeoDataFrames to Albers Equal Area (EPSG:5070)
-        nwi_gdf_albers = nwi_gdf.to_crs(epsg=5070)
-        # print(nwi_gdf_albers)
+        attrib_gdf_albers = attrib_gdf.to_crs(epsg=5070)
+        # print(attrib_gdf_albers)
         shed_gdf_albers = shed_gdf.to_crs(epsg=5070)
         # print(shed_gdf_albers)
     except Exception as e:
@@ -79,16 +79,12 @@ def wetlands_in_shed(nwi_gdf, shed_gdf):
         return None
 
     try:
-        # Perform intersection to retain wetlands in watersheds
+        # Perform intersection to retain polygons features in watersheds
         # print('trying intersection')
-        nwi_in_shed = geopandas.overlay(nwi_gdf_albers, shed_gdf_albers, how='intersection')
+        attrib_in_shed = geopandas.overlay(attrib_gdf_albers, shed_gdf_albers, how='intersection')
         # print(nwi_in_shed)
 
-        # # Only retain necessary columns
-        # columns_to_keep = ['attribute', 'wetland_ty', 'acres', 'shape_area', 'system', 'wet_class', 'geometry']
-        # nwi_in_shed = nwi_in_shed[columns_to_keep]
-
-        return nwi_in_shed
+        return attrib_in_shed
     except Exception as e:
         print(e)
         return None
@@ -185,6 +181,35 @@ def calc_wetland_metrics(nwi_gdf, shed_gdf):
     shed_sum_pivot = shed_sum.pivot(index=['gauge_id'], columns='wet_class', values='area_frac')
     shed_reset = shed_sum_pivot.reset_index()
     # print(shed_final)
+
+    # Merge the summary data back to the watershed shapefile so the output is geodataset
+    shed_final = shed_gdf.merge(shed_reset, on=['gauge_id'])
+
+    return shed_final
+
+def calc_geol_metrics(geol_gdf, shed_gdf):
+    """
+    Function to summarize wetland characteristics in a given catchment, based on wetland types and coverage areas.
+    :param geol_gdf: GeoDataFrame of SGMC geology data (linked with age data), should be polygon geometry.
+    Should have km2 area calculated.
+    :param shed_gdf: GeoDataFrame of watershed, should be a polygon geometry. Includes 'gauge_id' column.
+    :return: GeoDataFrame of wetland summary info for watersheds.
+    """
+    # take the average of the min and max ages, in millions of years, for each polygon
+    geol_gdf['AV_MA'] = (geol_gdf['MIN_MA'] + geol_gdf['MAX_MA']) / 2
+
+    # Group by rock type and calculate the average age and total shape area within each group
+    geol_type_sum = geol_gdf.groupby(['GENERALIZE', 'gauge_id']).agg(
+        {'AV_MA': 'mean', 'area_km2': 'sum'}).reset_index()
+    geol_type_sum.rename(columns={'area_km2': 'area_km2', 'AV_MA': 'av_age'}, inplace=True)
+
+
+    # Calculate the area fraction
+    geol_type_sum['area_frac'] = geol_type_sum['area_km2'] / geol_type_sum['shed_area']
+
+    # pivot the data wide???
+    shed_sum_pivot = geol_type_sum.pivot(index=['gauge_id'], columns='GENERALIZE', values='area_frac')
+    shed_reset = shed_sum_pivot.reset_index()
 
     # Merge the summary data back to the watershed shapefile so the output is geodataset
     shed_final = shed_gdf.merge(shed_reset, on=['gauge_id'])
