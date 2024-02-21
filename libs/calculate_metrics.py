@@ -203,41 +203,62 @@ def calc_geol_metrics(geol_gdf, shed_gdf):
         {'AV_MA': 'mean', 'area_km2': 'sum'}).reset_index()
     geol_type_sum.rename(columns={'area_km2': 'area_km2', 'AV_MA': 'av_age'}, inplace=True)
 
-
     # Calculate the area fraction
     geol_type_sum['area_frac'] = geol_type_sum['area_km2'] / geol_type_sum['shed_area']
 
-    # # pivot the data wide???
-    # shed_sum_pivot = geol_type_sum.pivot(index=['gauge_id'], columns='GENERALIZE', values='area_frac')
-    # shed_reset = shed_sum_pivot.reset_index()
-    #
-    # # Merge the summary data back to the watershed shapefile so the output is geodataset
-    # shed_final = shed_gdf.merge(shed_reset, on=['gauge_id'])
+    # calculate the area weighted age for each unit
+    geol_type_sum['av_age_w'] = geol_type_sum['area_frac'] * geol_type_sum['av_age']
 
-    return geol_type_sum
+    # calculate the area-weighted average age of the catchment
+    # geol_age = geol_type_sum['av_age_w'].sum()
+    geol_age = geol_type_sum.groupby(['gauge_id']).agg({'av_age_w': 'sum'}).reset_index()
+    print(geol_age)
+
+    # # only retain the major geologic unit type
+    # geol_major = geol_type_sum[geol_type_sum['area_frac'] == geol_type_sum['area_frac'].max()]
+    #
+    # geol_final = geol_major[['gauge_id', 'GENERALIZE', 'area_frac', 'av_age']].rename(columns=
+    #                                                                                  {'GENERALIZE': 'major_lith',
+    #                                                                                   'area_frac': 'lith_area_frac'})
+    # print(geol_final)
+
+    # pivot the data wide???
+    # shed_sum_pivot = geol_final.pivot(index=['gauge_id'], columns='GENERALIZE', values='area_frac')
+    # shed_reset = shed_sum_pivot.reset_index()
+
+    # Merge the summary data back to the watershed shapefile so the output is geodataset
+    shed_final = shed_gdf.merge(geol_age, on=['gauge_id'])
+    # shed_final = shed_gdf.merge(geol_final, on=['gauge_id'])
+
+    # print(shed_final)
+
+    return shed_final
 
 
 # camels_sheds = geopandas.read_file(
 #             'C:/Users/aholt8450/Documents/Data/basin_set_full_res/HCDN_nhru_final_671.shp')
-camels_sheds = geopandas.read_file(
-            'E:/SDSU_GEOG/Thesis/Data/CAMELS/basin_set_full_res/HCDN_nhru_final_671.shp')
+# camels_sheds = geopandas.read_file(
+#             'E:/SDSU_GEOG/Thesis/Data/CAMELS/basin_set_full_res/HCDN_nhru_final_671.shp')
+#
+# camels_sheds_2 = camels_sheds.loc[:, ['hru_id', 'geometry']]
+# camels_sheds_2 = camels_sheds_2.rename(columns={'hru_id': 'gauge_id'})
+# camels_sheds_2['gauge_id'] = camels_sheds_2['gauge_id'].astype(str).str.zfill(8)
+#
+# camels_test = camels_sheds_2.iloc[[0]]
+# # print(camels_test)
+#
+# shed_area = calc_area_shed(camels_test)
+# print(shed_area)
+# geol_test = geopandas.read_file('E:/SDSU_GEOG/Thesis/Data/Geology_outputs/01013500_sgmc_geology.shp')
+# clip_test = polygons_in_shed(geol_test, shed_area)
+# print(clip_test)
+# area_test = calc_area_polygons(clip_test)
+# print(area_test)
+# geol_metrics_test = calc_geol_metrics(area_test, shed_area)
+# print(geol_metrics_test)
 
-camels_sheds_2 = camels_sheds.loc[:, ['hru_id', 'geometry']]
-camels_sheds_2 = camels_sheds_2.rename(columns={'hru_id': 'gauge_id'})
-camels_sheds_2['gauge_id'] = camels_sheds_2['gauge_id'].astype(str).str.zfill(8)
 
-camels_test = camels_sheds_2.iloc[[0]]
-# print(camels_test)
 
-shed_area = calc_area_shed(camels_test)
-print(shed_area)
-geol_test = geopandas.read_file('E:/SDSU_GEOG/Thesis/Data/Geology_outputs/01013500_sgmc_geology.shp')
-clip_test = polygons_in_shed(geol_test, shed_area)
-print(clip_test)
-area_test = calc_area_polygons(clip_test)
-print(area_test)
-geol_metrics_test = calc_geol_metrics(area_test, shed_area)
-print(geol_metrics_test)
 
 
 
