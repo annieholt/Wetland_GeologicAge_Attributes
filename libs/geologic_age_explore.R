@@ -171,7 +171,7 @@ ggplot() +
   )
 
 
-ggsave("E:/SDSU_GEOG/Thesis/Data/Signatures/figures_geology/geol_age_lith.png", width = 11, height = 6, dpi = 300,bg = "white")
+# ggsave("E:/SDSU_GEOG/Thesis/Data/Signatures/figures_geology/geol_age_lith.png", width = 11, height = 6, dpi = 300,bg = "white")
 
 # and major lithologies plot 
 # ggplot() +
