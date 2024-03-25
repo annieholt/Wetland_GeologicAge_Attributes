@@ -521,6 +521,63 @@ def sgmc_camels_download():
         except Exception as e:
             print(f"An error occurred: {e}")
 
+def sgmc_metrics_workflow_camels():
+    # prep nwi data and run metrics calculation for each camels watershed
+    camels_sheds = geopandas.read_file('E:/SDSU_GEOG/Thesis/Data/CAMELS/basin_set_full_res/HCDN_nhru_final_671.shp')
+
+    # # first, testing a smaller subset
+    # camels_sheds_test = camels_sheds.head(10).copy()
+    # # print(camels_sheds_test)
+
+    # Initialize an empty list to store the results
+    results = []
+
+    for index, row in camels_sheds.iterrows():
+
+        try:
+            # create a geodataframe for current watershed
+            single_row_gdf = camels_sheds.iloc[[index]]
+
+            # removing unneeded attribute data and making sure ID column has 8 values (leading zero sometimes)
+            shed_gdf = single_row_gdf.loc[:, ['hru_id', 'geometry']]
+            shed_gdf = shed_gdf.rename(columns={'hru_id': 'gauge_id'})
+            shed_gdf['gauge_id'] = shed_gdf['gauge_id'].astype(str).str.zfill(8)
+            # print(shed_gdf)
+
+            sgmc_path = 'E:/SDSU_GEOG/Thesis/Data/Geology_outputs'
+            gauge_id = shed_gdf['gauge_id'].iloc[0]
+            file_name = gauge_id + '_sgmc_geology.shp'
+            # print(file_name)
+            # create pull file path
+            file_path = os.path.join(sgmc_path, file_name)
+            print(file_path)
+            sgmc_gdf = geopandas.read_file(file_path)
+            # print(nwi_gdf)
+
+            # metrics processing; below function order is required
+            shed_area = calc_area_shed(shed_gdf)
+            sgmc_shed_join = polygons_in_shed(sgmc_gdf, shed_area)
+            sgmc_area = calc_area_polygons(sgmc_shed_join)
+            sgmc_metrics = calc_geol_metrics(sgmc_area, shed_area)
+
+            # export just in case for now
+            file_name_export = gauge_id + '_geol_metrics.shp'
+            # create pull file path
+            file_path_export = os.path.join('E:/SDSU_GEOG/Thesis/Data/Geology_outputs/Shapefiles/by_id',
+                                            file_name_export)
+            print(file_path_export)
+            # sgmc_metrics.to_file(file_path_export, index=False)
+
+            # add to results
+            results.append(sgmc_metrics)
+
+        except Exception as e:
+            print(f"An error occurred: {e}")
+
+    result_gdf = pandas.concat(results, ignore_index=True)
+    # print(result_gdf)
+    result_gdf.to_file("E:/SDSU_GEOG/Thesis/Data/Geology_outputs/Shapefiles/sgmc_camels_metrics_age_weighted.shp")
+
 def main():
     # nwi_metrics_workflow_camels()
 
@@ -532,7 +589,9 @@ def main():
 
     # giws_metrics_workflow()
 
-    sgmc_camels_download()
+    # sgmc_camels_download()
+
+    sgmc_metrics_workflow_camels()
 
 
 
