@@ -18,48 +18,56 @@ library(corrr)
 
 #### PREP SIGNATURE DATA ###
 sigs_c = read.csv('E:/SDSU_GEOG/Thesis/Data/Signatures/sigs_camels.csv', colClasses = c(gauge_id = "character"))
-sigs_g = read.csv('E:/SDSU_GEOG/Thesis/Data/Signatures/sigs_gagesII_ref_subset.csv', colClasses = c(gauge_id = "character")) %>% 
-  mutate(gauge_id = str_pad(string = as.numeric(gauge_id), width = 8, side = 'left', pad = 0))
+
+# sigs_g = read.csv('E:/SDSU_GEOG/Thesis/Data/Signatures/sigs_gagesII_ref_subset.csv', colClasses = c(gauge_id = "character")) %>% 
+#   mutate(gauge_id = str_pad(string = as.numeric(gauge_id), width = 8, side = 'left', pad = 0))
 
 
 # for now, working with BFI, rececession_a_seasonality, BaseflowRecessionK
 # these only require flow data, and are recommended by McMillan et al., 2022
 
-sigs_c_subset = sigs_c %>% 
-  select(gauge_id, BFI, Recession_a_Seasonality, BaseflowRecessionK) %>% 
-  mutate(datasource = "CAMELS")
-
-sigs_g_subset = sigs_g %>% 
-  select(gauge_id, BFI, Recession_a_Seasonality, BaseflowRecessionK) %>% 
-  mutate(datasource = 'GagesII')
-
-
-sigs = sigs_c_subset %>% 
-  bind_rows(sigs_g_subset)
-
-
-# more full dataset
-
-sigs_c_2 = sigs_c %>% 
-  select(gauge_id, BFI, Recession_a_Seasonality, BaseflowRecessionK, First_Recession_Slope, Mid_Recession_Slope,
-         MRC_num_segments, Spearmans_rho, VariabilityIndex, RecessionParameters_a, RecessionParameters_b, RecessionParameters_c) %>% 
-  mutate(datasource = 'CAMELS')
-sigs_g_2 = sigs_g %>% 
-  select(gauge_id, BFI, Recession_a_Seasonality, BaseflowRecessionK, First_Recession_Slope, Mid_Recession_Slope,
-         MRC_num_segments, Spearmans_rho, VariabilityIndex, RecessionParameters_1, RecessionParameters_2, RecessionParameters_3) %>% 
-  mutate(datasource = 'GagesII') %>% 
-  rename(RecessionParameters_a = RecessionParameters_1, RecessionParameters_b = RecessionParameters_2,
-         RecessionParameters_c = RecessionParameters_3)
+# sigs_c_subset = sigs_c %>% 
+#   select(gauge_id, BFI, Recession_a_Seasonality, BaseflowRecessionK) %>% 
+#   mutate(datasource = "CAMELS")
+# 
+# sigs_g_subset = sigs_g %>% 
+#   select(gauge_id, BFI, Recession_a_Seasonality, BaseflowRecessionK) %>% 
+#   mutate(datasource = 'GagesII')
+# 
+# sigs = sigs_c_subset %>% 
+#   bind_rows(sigs_g_subset)
 
 
-sigs_2 = sigs_c_2 %>% 
-  bind_rows(sigs_g_2)
+# more full datasets
+
+# for just camels, all sigs:
+sigs_c_3 = sigs_c %>% 
+  select(gauge_id,EventRR, TotalRR, RR_Seasonality, Recession_a_Seasonality, AverageStorage, RecessionParameters_a,
+         RecessionParameters_b, RecessionParameters_c, First_Recession_Slope, Mid_Recession_Slope, EventRR_TotalRR_ratio,
+         VariabilityIndex, BaseflowRecessionK, BFI) %>% 
+  rename(RecessionParameters_T0 = RecessionParameters_c)
+# what about MRC num segments and Spearmans_rho??
+  
+
+# sigs_c_2 = sigs_c %>% 
+#   select(gauge_id, BFI, Recession_a_Seasonality, BaseflowRecessionK, First_Recession_Slope, Mid_Recession_Slope,
+#          MRC_num_segments, Spearmans_rho, VariabilityIndex, RecessionParameters_a, RecessionParameters_b, RecessionParameters_c) %>% 
+#   mutate(datasource = 'CAMELS')
+# sigs_g_2 = sigs_g %>% 
+#   select(gauge_id, BFI, Recession_a_Seasonality, BaseflowRecessionK, First_Recession_Slope, Mid_Recession_Slope,
+#          MRC_num_segments, Spearmans_rho, VariabilityIndex, RecessionParameters_1, RecessionParameters_2, RecessionParameters_3) %>% 
+#   mutate(datasource = 'GagesII') %>% 
+#   rename(RecessionParameters_a = RecessionParameters_1, RecessionParameters_b = RecessionParameters_2,
+#          RecessionParameters_c = RecessionParameters_3)
+# sigs_2 = sigs_c_2 %>% 
+#   bind_rows(sigs_g_2)
 
 
 #### PREP WETLAND METRICS DATA ###
 
-nwi_g = st_read('E:/SDSU_GEOG/Thesis/Data/NWI_outputs/Shapefiles/nwi_gagesII_ref_metrics_new_ecoregions.shp') %>% 
-  select(gauge_id, NA_L1KEY, shed_area, fresh, lake, other, geometry)
+# nwi_g = st_read('E:/SDSU_GEOG/Thesis/Data/NWI_outputs/Shapefiles/nwi_gagesII_ref_metrics_new_ecoregions.shp') %>% 
+#   select(gauge_id, NA_L1KEY, shed_area, fresh, lake, other, geometry)
+
 nwi_c = st_read('E:/SDSU_GEOG/Thesis/Data/NWI_outputs/Shapefiles/nwi_camels_metrics_ecoregions.shp') %>% 
   select(gauge_id,NA_L1KEY, shed_area, fresh, lake, other, geometry)
 
@@ -67,8 +75,14 @@ giws = st_read('E:/SDSU_GEOG/Thesis/Data/GIWs/giws_metrics.shp') %>%
   as.data.frame() %>% 
   select(gauge_id, area_frac)
 
-nwi_metrics = nwi_g %>% 
-  bind_rows(nwi_c) %>% 
+# nwi_metrics = nwi_g %>% 
+#   bind_rows(nwi_c) %>% 
+#   left_join(giws, by = 'gauge_id') %>% 
+#   # some places have zero isolated wetlands, so replace NAs with zero since shapefiles weren't returned for those
+#   mutate(area_frac = ifelse(is.na(area_frac), 0, area_frac)) %>% 
+#   mutate(fresh_no_giw = fresh + lake - area_frac)
+
+nwi_metrics = nwi_c %>% 
   left_join(giws, by = 'gauge_id') %>% 
   # some places have zero isolated wetlands, so replace NAs with zero since shapefiles weren't returned for those
   mutate(area_frac = ifelse(is.na(area_frac), 0, area_frac)) %>% 
@@ -76,32 +90,29 @@ nwi_metrics = nwi_g %>%
 
 #### FINAL DATASET FOR PLOTTING AND ANALYSIS ####
 
-sigs_nwi = sigs %>% 
-  left_join(nwi_metrics, by = c('gauge_id'))
-
-
-nwi_sigs = nwi_metrics %>% 
-  left_join(sigs, by = c('gauge_id')) %>% 
-  drop_na() %>% 
-  mutate(fresh_total = fresh + lake) %>% 
-  arrange(desc(area_frac))
-
-
-nwi_sigs_2 = nwi_metrics %>% 
-  left_join(sigs_2, by = c('gauge_id')) %>% 
-  drop_na() %>% 
-  mutate(fresh_total = fresh + lake) %>% 
-  arrange(desc(area_frac))
+# sigs_nwi = sigs %>% 
+#   left_join(nwi_metrics, by = c('gauge_id'))
+# 
+# nwi_sigs = nwi_metrics %>% 
+#   left_join(sigs, by = c('gauge_id')) %>% 
+#   drop_na() %>% 
+#   mutate(fresh_total = fresh + lake) %>% 
+#   arrange(desc(area_frac))
+# 
+# nwi_sigs_2 = nwi_metrics %>% 
+#   left_join(sigs_2, by = c('gauge_id')) %>% 
+#   drop_na() %>% 
+#   mutate(fresh_total = fresh + lake) %>% 
+#   arrange(desc(area_frac))
 
 nwi_sigs_camels = nwi_metrics %>% 
   select(gauge_id,area_frac, fresh_no_giw, geometry) %>% 
-  left_join(sigs_c, by = c('gauge_id')) %>% 
-  filter(!is.na(gauge_lat))
+  left_join(sigs_c_3, by = c('gauge_id'))
 
 
 #### wetland correlations #### 
 
-ggplot(nwi_sigs_2, aes(x = fresh_no_giw, y = area_frac)) +
+ggplot(nwi_sigs_camels, aes(x = fresh_no_giw, y = area_frac)) +
   geom_point(size = 4, color = 'black', shape = 21) +  # Increase the size of dots
   # geom_smooth(method = "loess", se = FALSE, color = "blue") +  # Add a smoothed line
   # ggtitle(paste("Spearman's Rank Correlation =", round(cor_result$estimate, 2),
@@ -118,7 +129,7 @@ ggplot(nwi_sigs_2, aes(x = fresh_no_giw, y = area_frac)) +
 # ggsave("E:/SDSU_GEOG/Thesis/Data/Signatures/Figures/BaseflowRecessionK_fresh.png", width = 4, height = 3, dpi = 300,bg = "white")
 
 
-cor_wet <- cor.test(nwi_sigs_2$fresh_no_giw, nwi_sigs_2$area_frac, method = "spearman", exact = FALSE)
+cor_wet <- cor.test(nwi_sigs_camels$fresh_no_giw, nwi_sigs_camels$area_frac, method = "spearman", exact = FALSE)
 
 # Print the correlation coefficient and p-value
 cat("Spearman rank correlation coefficient:", cor_wet$estimate, "\n")
@@ -134,36 +145,46 @@ cat("P-value:", cor_wet$p.value, "\n")
 #      label = paste("Spearman Correlation =", round(cor_spearman, 2)), pos = 4)
 
 
-corr_test = nwi_sigs_2 %>% 
-  select(fresh_no_giw, BFI, Recession_a_Seasonality, BaseflowRecessionK, First_Recession_Slope, Mid_Recession_Slope,
-         MRC_num_segments, VariabilityIndex, RecessionParameters_a, RecessionParameters_b, RecessionParameters_c) %>% 
+corr_iso = nwi_sigs_camels %>% 
+  select(area_frac, EventRR, TotalRR, RR_Seasonality, Recession_a_Seasonality, AverageStorage, RecessionParameters_a,
+         RecessionParameters_b, RecessionParameters_T0, First_Recession_Slope, Mid_Recession_Slope, EventRR_TotalRR_ratio,
+         VariabilityIndex, BaseflowRecessionK, BFI) %>% 
+  as.data.frame() %>% 
+  correlate(method = "spearman") %>% 
+  focus(area_frac) %>% 
+  mutate(term_2 = factor(term, levels = term[order(area_frac)]))
+
+corr_con = nwi_sigs_camels %>% 
+  select(fresh_no_giw, EventRR, TotalRR, RR_Seasonality, Recession_a_Seasonality, AverageStorage, RecessionParameters_a,
+         RecessionParameters_b, RecessionParameters_T0, First_Recession_Slope, Mid_Recession_Slope, EventRR_TotalRR_ratio,
+         VariabilityIndex, BaseflowRecessionK, BFI) %>% 
   as.data.frame() %>% 
   correlate(method = "spearman") %>% 
   focus(fresh_no_giw) %>% 
   mutate(term_2 = factor(term, levels = term[order(fresh_no_giw)]))
 
+# prep for panel plotting
+corr_sigs_wet = corr_iso %>% 
+  left_join(corr_con) %>% 
+  select(term, area_frac, fresh_no_giw) %>% 
+  gather(key = "variable", value = "value", area_frac, fresh_no_giw)
 
 
-
-cor_sigs <- cor.test(nwi_sigs_2$area_frac, nwi_sigs_2$VariabilityIndex, method = "spearman", exact = FALSE)
+cor_sigs <- cor.test(nwi_sigs_camels$area_frac, nwi_sigs_camels$VariabilityIndex, method = "spearman", exact = FALSE)
 
 # Print the correlation coefficient and p-value
 cat("Spearman rank correlation coefficient:", cor_sigs$estimate, "\n")
 cat("P-value:", cor_sigs$p.value, "\n")
 
 
-
-
-
-
-corr_test_subregion = nwi_sigs_2 %>% 
-  filter(NA_L1KEY == "5  NORTHERN FORESTS") %>% 
-  select(fresh_no_giw, BFI, Recession_a_Seasonality, BaseflowRecessionK, First_Recession_Slope, Mid_Recession_Slope,
-         MRC_num_segments, VariabilityIndex, RecessionParameters_a, RecessionParameters_b, RecessionParameters_c) %>% 
-  as.data.frame() %>% 
-  correlate(method = "spearman") %>% 
-  focus(fresh_no_giw) %>% 
-  mutate(term_2 = factor(term, levels = term[order(fresh_no_giw)]))
+# corr_test_subregion = nwi_sigs_2 %>% 
+#   filter(NA_L1KEY == "5  NORTHERN FORESTS") %>% 
+#   select(fresh_no_giw, BFI, Recession_a_Seasonality, BaseflowRecessionK, First_Recession_Slope, Mid_Recession_Slope,
+#          MRC_num_segments, VariabilityIndex, RecessionParameters_a, RecessionParameters_b, RecessionParameters_c) %>% 
+#   as.data.frame() %>% 
+#   correlate(method = "spearman") %>% 
+#   focus(fresh_no_giw) %>% 
+#   mutate(term_2 = factor(term, levels = term[order(fresh_no_giw)]))
   
 
 # ggplot(corr_test, aes(x = term_2, y = fresh_no_giw)) +
@@ -182,17 +203,24 @@ corr_test_subregion = nwi_sigs_2 %>%
 
 
 # Create ggplot with colored and sized dots
-ggplot(corr_test, aes(x = term, y = 1, color = fresh_no_giw, size = abs(fresh_no_giw))) +
+
+# Define custom labels for facet_wrap
+wet_labels <- c(
+  "area_frac" = "Isolated Wetlands",
+  "fresh_no_giw" = "Connected Wetlands"
+)
+
+ggplot(corr_sigs_wet, aes(x = term, y = 1, color = value, size = abs(value))) +
   geom_point() +
   scale_color_gradient2(low = "red", mid = "grey", high = "blue", 
-                        midpoint = mean(corr_test$fresh_no_giw), name = "Spearman's Rho",
+                        midpoint = mean(corr_sigs_wet$value), name = "Spearman's Rho",
                         limits = c(-0.3, 0.3)) +
   scale_size(range = c(6, 16)) +  # Adjust the overall size scale
   labs(
     y = NULL,  # No y-axis label
     x = NULL,
   ) +
-  ggtitle("Correlations with Connected Wetland Area Fraction") +  # Add plot title
+  # ggtitle("Correlations with Isolated Wetland Area Fraction") +
   theme_minimal() +                    # Use a minimal theme
   theme(
     plot.title = element_text(size=24),
@@ -206,10 +234,11 @@ ggplot(corr_test, aes(x = term, y = 1, color = fresh_no_giw, size = abs(fresh_no
     legend.key.size = unit(2, "lines")  # Adjust the size of the legend color key
   ) +
   guides(size = FALSE)+
-  coord_cartesian(ylim = c(1, 1))
+  # coord_cartesian(ylim = c(1, 1))
+  facet_wrap(~ variable, scales = "free_y", nrow = 2, labeller = as_labeller(wet_labels))
 
 
-# ggsave("E:/SDSU_GEOG/Thesis/Data/Signatures/Figures/fresh_no_giw_spearmans.png", width = 10.5, height = 5, dpi = 300,bg = "white")
+ggsave("E:/SDSU_GEOG/Thesis/Data/Signatures/figures_final/sigs_wetlands_camels.png", width = 10.5, height = 6, dpi = 300,bg = "white")
 
 
 
@@ -263,12 +292,12 @@ centroids_sf <- st_centroid(nwi_metrics)
 # Plot the map with polygons represented as dots, colored by the variable
 ggplot() +
   geom_sf(data = conus, color = "white", fill = "grey") +  # Plot polygon boundaries, color by variable
-  geom_sf(data = centroids_sf, aes(fill = area_frac), shape = 21, color = "darkgrey", size = 4, alpha = 1) +  # Plot centroids as dots, color by variable
+  geom_sf(data = centroids_sf, aes(fill = fresh_no_giw), shape = 21, color = "darkgrey", size = 4, alpha = 1) +  # Plot centroids as dots, color by variable
   # scale_fill_distiller(direction=1)+
   # scale_fill_viridis_c()+
-  scale_fill_distiller(palette = "YlGnBu", direction = 1, name = NULL)+
+  scale_fill_distiller(palette = "YlGnBu", direction = 1, name = NULL,breaks = seq(0, 0.8, 0.2))+
   # scale_fill_gradient(low = "white", high = "blue4") +  # Set color scale
-  ggtitle("Isolated Wetland Area Fraction") +
+  ggtitle("Connected Wetland Area Fraction") +
   theme_void()+
   theme(
     plot.title = element_text(size = 30, hjust = 0.5),  # Adjust title size and centering
@@ -278,7 +307,7 @@ ggplot() +
     legend.margin = margin(r = 10)
   )
 
-# ggsave("E:/SDSU_GEOG/Thesis/Data/Signatures/Figures/nwi_giw.png", width = 11, height = 6, dpi = 300,bg = "white")
+ggsave("E:/SDSU_GEOG/Thesis/Data/Signatures/figures_final/connected_camels.png", width = 11, height = 6, dpi = 300,bg = "white")
 
 
 
