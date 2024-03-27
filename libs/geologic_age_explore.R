@@ -181,18 +181,25 @@ ggplot(cor_results, aes(x = variable, y = 1, color = estimate, size = abs(estima
 
 conus <- st_read('E:/SDSU_GEOG/Thesis/Data/US states/conus_states.shp')
 
+geol_hysets = st_read('E:/SDSU_GEOG/Thesis/Data/Geology_outputs/Hysets/sgmc_hysets_metrics_age_weighted.shp')
+
+geol_all = geol_c_av %>% 
+  bind_rows(geol_hysets)
+  
+
 # Create a new sf object with points representing the centroids of the polygons
-centroids_sf <- st_centroid(geol_c)
+# centroids_sf <- st_centroid(geol_c)
+centroids_sf <- st_centroid(geol_all)
 
 # Plot the map with polygons represented as dots, colored by the variable
 ggplot() +
   geom_sf(data = conus, color = "white", fill = "grey") +  # Plot polygon boundaries, color by variable
-  geom_sf(data = centroids_sf, aes(fill = av_age), shape = 21, color = "darkgrey", size = 4, alpha = 1) +  # Plot centroids as dots, color by variable
+  geom_sf(data = centroids_sf, aes(fill = av_age_w), shape = 21, color = "darkgrey", size = 3, alpha = 1) +  # Plot centroids as dots, color by variable
   # scale_fill_distiller(direction=1)+
   # scale_fill_viridis_c()+
   scale_fill_distiller(palette = "YlOrRd", direction = 1, name = NULL)+
   # scale_fill_gradient(low = "white", high = "blue4") +  # Set color scale
-  ggtitle("Geologic Age of Major Lithology (Ma)") +
+  ggtitle("Average Geologic Age (Ma)") +
   theme_void()+
   theme(
     plot.title = element_text(size = 30, hjust = 0.5),  # Adjust title size and centering
@@ -203,7 +210,7 @@ ggplot() +
   )
 
 
-ggsave("E:/SDSU_GEOG/Thesis/Data/Signatures/figures_final/geol_age_lith_camels.png", width = 11, height = 6, dpi = 300,bg = "white")
+ggsave("E:/SDSU_GEOG/Thesis/Data/Signatures/figures_final/geol_age_av_all.png", width = 11, height = 6, dpi = 300,bg = "white")
 
 # and major lithologies plot 
 # ggplot() +
