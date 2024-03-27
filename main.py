@@ -470,12 +470,19 @@ def download_flow():
 def sgmc_camels_download():
     # iterate data retrieval for each camels watershed
     # camels_sheds = geopandas.read_file('E:/SDSU_GEOG/Thesis/Data/CAMELS/basin_set_full_res/HCDN_nhru_final_671.shp')
-    camels_sheds = geopandas.read_file(
-        'E:/SDSU_GEOG/Thesis/Data/CAMELS/basin_set_full_res/HCDN_nhru_final_671.shp')
+    # camels_sheds = geopandas.read_file(
+    #     'E:/SDSU_GEOG/Thesis/Data/CAMELS/basin_set_full_res/HCDN_nhru_final_671.shp')
+    #
+    # camels_sheds_2 = camels_sheds.loc[:, ['hru_id', 'geometry']]
+    # camels_sheds_2 = camels_sheds_2.rename(columns={'hru_id': 'gauge_id'})
+    # camels_sheds_2['gauge_id'] = camels_sheds_2['gauge_id'].astype(str).str.zfill(8)
 
-    camels_sheds_2 = camels_sheds.loc[:, ['hru_id', 'geometry']]
-    camels_sheds_2 = camels_sheds_2.rename(columns={'hru_id': 'gauge_id'})
+    # these are hysets sheds now, but just keeping camels name for now because don't want to change
+    camels_sheds = geopandas.read_file(
+        'E:/SDSU_GEOG/Thesis/Data/Caravan/shapefiles/hysets/hysets_basin_shapes_nocamels.shp')
+    camels_sheds_2 = camels_sheds.loc[:, ['gauge_id', 'geometry']]
     camels_sheds_2['gauge_id'] = camels_sheds_2['gauge_id'].astype(str).str.zfill(8)
+    # print(camels_sheds_2)
 
     # first, testing a smaller subset
     # camels_sheds_test = camels_sheds_2.head(10).copy()
@@ -489,7 +496,7 @@ def sgmc_camels_download():
         try:
             # Create a new GeoDataFrame with a single row
             single_row_gdf = camels_sheds_2.iloc[[index]]
-            # print(single_row_gdf)
+            print(single_row_gdf)
 
             # Append it to the list
             camels_sheds_list.append(single_row_gdf)
@@ -498,7 +505,8 @@ def sgmc_camels_download():
             # note that this is equivalent to intersection rather than clip, so sometimes the features extend
             geodatabase_path = "E:/SDSU_GEOG/Thesis/Data/Geology/SGMC_Geology.gdb"
             layer_name = 'SGMC_Geology_Age'
-            out_dir = 'E:/SDSU_GEOG/Thesis/Data/Geology_outputs'
+            # out_dir = 'E:/SDSU_GEOG/Thesis/Data/Geology_outputs'
+            out_dir = 'E:/SDSU_GEOG/Thesis/Data/Geology_outputs/Hysets/download'
 
             out_gdf = geopandas.read_file(geodatabase_path, driver='FileGDB', layer=layer_name, mask=single_row_gdf)
             # print(out_gdf)
@@ -523,7 +531,11 @@ def sgmc_camels_download():
 
 def sgmc_metrics_workflow_camels():
     # prep nwi data and run metrics calculation for each camels watershed
-    camels_sheds = geopandas.read_file('E:/SDSU_GEOG/Thesis/Data/CAMELS/basin_set_full_res/HCDN_nhru_final_671.shp')
+    # camels_sheds = geopandas.read_file('E:/SDSU_GEOG/Thesis/Data/CAMELS/basin_set_full_res/HCDN_nhru_final_671.shp')
+
+    # these are hysets sheds now, but just keeping camels name for now because don't want to change
+    camels_sheds = geopandas.read_file(
+        'E:/SDSU_GEOG/Thesis/Data/Caravan/shapefiles/hysets/hysets_basin_shapes_nocamels.shp')
 
     # # first, testing a smaller subset
     # camels_sheds_test = camels_sheds.head(10).copy()
@@ -539,12 +551,15 @@ def sgmc_metrics_workflow_camels():
             single_row_gdf = camels_sheds.iloc[[index]]
 
             # removing unneeded attribute data and making sure ID column has 8 values (leading zero sometimes)
-            shed_gdf = single_row_gdf.loc[:, ['hru_id', 'geometry']]
-            shed_gdf = shed_gdf.rename(columns={'hru_id': 'gauge_id'})
+            # shed_gdf = single_row_gdf.loc[:, ['hru_id', 'geometry']]
+            # shed_gdf = shed_gdf.rename(columns={'hru_id': 'gauge_id'})
+
+            shed_gdf = single_row_gdf.loc[:, ['gauge_id', 'geometry']]
             shed_gdf['gauge_id'] = shed_gdf['gauge_id'].astype(str).str.zfill(8)
             # print(shed_gdf)
 
-            sgmc_path = 'E:/SDSU_GEOG/Thesis/Data/Geology_outputs'
+            # sgmc_path = 'E:/SDSU_GEOG/Thesis/Data/Geology_outputs'
+            sgmc_path = 'E:/SDSU_GEOG/Thesis/Data/Geology_outputs/Hysets/download'
             gauge_id = shed_gdf['gauge_id'].iloc[0]
             file_name = gauge_id + '_sgmc_geology.shp'
             # print(file_name)
@@ -563,7 +578,9 @@ def sgmc_metrics_workflow_camels():
             # export just in case for now
             file_name_export = gauge_id + '_geol_metrics.shp'
             # create pull file path
-            file_path_export = os.path.join('E:/SDSU_GEOG/Thesis/Data/Geology_outputs/Shapefiles/by_id',
+            # file_path_export = os.path.join('E:/SDSU_GEOG/Thesis/Data/Geology_outputs/Shapefiles/by_id',
+            #                                 file_name_export)
+            file_path_export = os.path.join('E:/SDSU_GEOG/Thesis/Data/Geology_outputs/Hysets/download/metrics',
                                             file_name_export)
             print(file_path_export)
             # sgmc_metrics.to_file(file_path_export, index=False)
@@ -576,7 +593,8 @@ def sgmc_metrics_workflow_camels():
 
     result_gdf = pandas.concat(results, ignore_index=True)
     # print(result_gdf)
-    result_gdf.to_file("E:/SDSU_GEOG/Thesis/Data/Geology_outputs/Shapefiles/sgmc_camels_metrics_age_weighted.shp")
+    # result_gdf.to_file("E:/SDSU_GEOG/Thesis/Data/Geology_outputs/Shapefiles/sgmc_camels_metrics_age_weighted.shp")
+    result_gdf.to_file("E:/SDSU_GEOG/Thesis/Data/Geology_outputs/Hysets/sgmc_hysets_metrics_age_weighted.shp")
 
 def main():
     # nwi_metrics_workflow_camels()
