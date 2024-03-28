@@ -206,29 +206,28 @@ def calc_geol_metrics(geol_gdf, shed_gdf):
     # Calculate the area fraction
     geol_type_sum['area_frac'] = geol_type_sum['area_km2'] / geol_type_sum['shed_area']
 
-    # calculate the area weighted age for each unit
-    geol_type_sum['av_age_w'] = geol_type_sum['area_frac'] * geol_type_sum['av_age']
+    # # calculate the area weighted age for each unit
+    # geol_type_sum['av_age_w'] = geol_type_sum['area_frac'] * geol_type_sum['av_age']
+    # # calculate the area-weighted average age of the catchment
+    # # geol_age = geol_type_sum['av_age_w'].sum()
+    # geol_age = geol_type_sum.groupby(['gauge_id']).agg({'av_age_w': 'sum'}).reset_index()
+    # # print(geol_age)
 
-    # calculate the area-weighted average age of the catchment
-    # geol_age = geol_type_sum['av_age_w'].sum()
-    geol_age = geol_type_sum.groupby(['gauge_id']).agg({'av_age_w': 'sum'}).reset_index()
-    print(geol_age)
+    # only retain the major geologic unit type
+    geol_major = geol_type_sum[geol_type_sum['area_frac'] == geol_type_sum['area_frac'].max()]
 
-    # # only retain the major geologic unit type
-    # geol_major = geol_type_sum[geol_type_sum['area_frac'] == geol_type_sum['area_frac'].max()]
-    #
-    # geol_final = geol_major[['gauge_id', 'GENERALIZE', 'area_frac', 'av_age']].rename(columns=
-    #                                                                                  {'GENERALIZE': 'major_lith',
-    #                                                                                   'area_frac': 'lith_area_frac'})
-    # print(geol_final)
+    geol_final = geol_major[['gauge_id', 'GENERALIZE', 'area_frac', 'av_age']].rename(columns=
+                                                                                     {'GENERALIZE': 'major_lith',
+                                                                                      'area_frac': 'lith_area_frac'})
+    print(geol_final)
 
     # pivot the data wide???
     # shed_sum_pivot = geol_final.pivot(index=['gauge_id'], columns='GENERALIZE', values='area_frac')
     # shed_reset = shed_sum_pivot.reset_index()
 
     # Merge the summary data back to the watershed shapefile so the output is geodataset
-    shed_final = shed_gdf.merge(geol_age, on=['gauge_id'])
-    # shed_final = shed_gdf.merge(geol_final, on=['gauge_id'])
+    # shed_final = shed_gdf.merge(geol_age, on=['gauge_id'])
+    shed_final = shed_gdf.merge(geol_final, on=['gauge_id'])
 
     # print(shed_final)
 
