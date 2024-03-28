@@ -35,11 +35,14 @@ import os
 def nwi_camels_download():
     # iterate data retrieval for each camels watershed
     # camels_sheds = geopandas.read_file('E:/SDSU_GEOG/Thesis/Data/CAMELS/basin_set_full_res/HCDN_nhru_final_671.shp')
-    camels_sheds = geopandas.read_file(
-        'C:/Users/aholt8450/Documents/Data/basin_set_full_res/HCDN_nhru_final_671.shp')
+    # camels_sheds = geopandas.read_file(
+    #     'C:/Users/aholt8450/Documents/Data/basin_set_full_res/HCDN_nhru_final_671.shp')
 
-    camels_sheds_2 = camels_sheds.loc[:, ['hru_id', 'geometry']]
-    camels_sheds_2 = camels_sheds_2.rename(columns={'hru_id': 'gauge_id'})
+    camels_sheds = geopandas.read_file('E:/SDSU_GEOG/Thesis/Data/Caravan/shapefiles/hysets/hysets_basin_shapes_nocamels.shp')
+    camels_sheds_2 = camels_sheds.loc[:, ['gauge_id', 'geometry']]
+
+    # camels_sheds_2 = camels_sheds.loc[:, ['hru_id', 'geometry']]
+    # camels_sheds_2 = camels_sheds_2.rename(columns={'hru_id': 'gauge_id'})
     camels_sheds_2['gauge_id'] = camels_sheds_2['gauge_id'].astype(str).str.zfill(8)
 
     # first, testing a smaller subset
@@ -61,9 +64,11 @@ def nwi_camels_download():
 
             # import nwi data from geodatabase
             # note that this is equivalent to intersection rather than clip, so sometimes the features extend
-            geodatabase_path = "C:/Users/aholt8450/Documents/ArcGIS/Projects/NWI_testing/NWI_testing.gdb"
+            # geodatabase_path = "C:/Users/aholt8450/Documents/ArcGIS/Projects/NWI_testing/NWI_testing.gdb"
+            geodatabase_path = "E:/SDSU_GEOG/Thesis/Data/NWI_CONUS/NWI_testing.gdb"
             layer_name = 'Wetlands_Merge_CONUS'
-            out_dir = 'C:/Users/aholt8450/Documents/Data/NWI_camels'
+            # out_dir = 'C:/Users/aholt8450/Documents/Data/NWI_camels'
+            out_dir = 'E:/SDSU_GEOG/Thesis/Data/NWI_hysets/downloads'
 
             out_gdf = geopandas.read_file(geodatabase_path, driver='FileGDB', layer=layer_name, mask=single_row_gdf)
             # print(out_gdf)
@@ -89,7 +94,10 @@ def nwi_camels_download():
 
 def nwi_metrics_workflow_camels():
     # prep nwi data and run metrics calculation for each camels watershed
-    camels_sheds = geopandas.read_file('E:/SDSU_GEOG/Thesis/Data/CAMELS/basin_set_full_res/HCDN_nhru_final_671.shp')
+    # camels_sheds = geopandas.read_file('E:/SDSU_GEOG/Thesis/Data/CAMELS/basin_set_full_res/HCDN_nhru_final_671.shp')
+
+    camels_sheds = geopandas.read_file(
+        'E:/SDSU_GEOG/Thesis/Data/Caravan/shapefiles/hysets/hysets_basin_shapes_nocamels.shp')
 
     # # first, testing a smaller subset
     # camels_sheds_test = camels_sheds.head(10).copy()
@@ -105,8 +113,10 @@ def nwi_metrics_workflow_camels():
             single_row_gdf = camels_sheds.iloc[[index]]
 
             # removing unneeded attribute data and making sure ID column has 8 values (leading zero sometimes)
-            shed_gdf = single_row_gdf.loc[:, ['hru_id', 'geometry']]
-            shed_gdf = shed_gdf.rename(columns={'hru_id': 'gauge_id'})
+            # shed_gdf = single_row_gdf.loc[:, ['hru_id', 'geometry']]
+            # shed_gdf = shed_gdf.rename(columns={'hru_id': 'gauge_id'})
+
+            shed_gdf = single_row_gdf.loc[:, ['gauge_id', 'geometry']]
             shed_gdf['gauge_id'] = shed_gdf['gauge_id'].astype(str).str.zfill(8)
             # print(shed_gdf)
 
@@ -114,7 +124,8 @@ def nwi_metrics_workflow_camels():
             # nwi_gdf = nwi_download_api(shed_gdf=shed_gdf, out_dir="E:/SDSU_GEOG/Thesis/Data/NWI_outputs/Shapefiles",
             #                            save=True)
 
-            nwi_path = 'E:/SDSU_GEOG/Thesis/Data/NWI_camels'
+            # nwi_path = 'E:/SDSU_GEOG/Thesis/Data/NWI_camels'
+            nwi_path = 'E:/SDSU_GEOG/Thesis/Data/NWI_hysets/downloads'
             gauge_id = shed_gdf['gauge_id'].iloc[0]
             file_name = gauge_id + '_nwi_wetlands.shp'
             # print(file_name)
@@ -126,15 +137,22 @@ def nwi_metrics_workflow_camels():
 
             # metrics processing; below function order is required
             shed_area = calc_area_shed(shed_gdf)
+            # print(shed_area)
             nwi_prep = prep_nwi(nwi_gdf)
-            nwi_shed_join = wetlands_in_shed(nwi_prep, shed_area)
-            nwi_area = calc_area_nwi(nwi_shed_join)
+            # print(nwi_prep)
+            nwi_shed_join = polygons_in_shed(nwi_prep, shed_area)
+            # print(nwi_shed_join)
+            nwi_area = calc_area_polygons(nwi_shed_join)
+            # print(nwi_area)
             nwi_metrics = calc_wetland_metrics(nwi_area, shed_area)
+            # print(nwi_metrics)
 
             # export just in case for now
             file_name_export = gauge_id + '_wetland_metrics.shp'
             # create pull file path
-            file_path_export = os.path.join('E:/SDSU_GEOG/Thesis/Data/NWI_outputs/Shapefiles/by_id',
+            # file_path_export = os.path.join('E:/SDSU_GEOG/Thesis/Data/NWI_outputs/Shapefiles/by_id',
+            #                                 file_name_export)
+            file_path_export = os.path.join('E:/SDSU_GEOG/Thesis/Data/NWI_hysets/metrics',
                                             file_name_export)
             print(file_path_export)
             nwi_metrics.to_file(file_path_export, index=False)
@@ -147,7 +165,8 @@ def nwi_metrics_workflow_camels():
 
     result_gdf = pandas.concat(results, ignore_index=True)
     # print(result_gdf)
-    result_gdf.to_file("E:/SDSU_GEOG/Thesis/Data/NWI_outputs/Shapefiles/nwi_camels_metrics.shp")
+    # result_gdf.to_file("E:/SDSU_GEOG/Thesis/Data/NWI_outputs/Shapefiles/nwi_camels_metrics.shp")
+    result_gdf.to_file("E:/SDSU_GEOG/Thesis/Data/NWI_hysets/nwi_hysets_metrics.shp")
 
 
 def nwi_gagesII_download():
@@ -594,10 +613,12 @@ def sgmc_metrics_workflow_camels():
     result_gdf = pandas.concat(results, ignore_index=True)
     # print(result_gdf)
     # result_gdf.to_file("E:/SDSU_GEOG/Thesis/Data/Geology_outputs/Shapefiles/sgmc_camels_metrics_age_weighted.shp")
-    result_gdf.to_file("E:/SDSU_GEOG/Thesis/Data/Geology_outputs/Hysets/sgmc_hysets_metrics_age_weighted.shp")
+    result_gdf.to_file("E:/SDSU_GEOG/Thesis/Data/Geology_outputs/Hysets/sgmc_hysets_metrics_age_majorlith.shp")
 
 def main():
-    # nwi_metrics_workflow_camels()
+    # nwi_camels_download()
+
+    nwi_metrics_workflow_camels()
 
     # nwi_gagesII_download()
 
@@ -609,7 +630,7 @@ def main():
 
     # sgmc_camels_download()
 
-    sgmc_metrics_workflow_camels()
+    # sgmc_metrics_workflow_camels()
 
 
 
