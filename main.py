@@ -320,8 +320,11 @@ def nwi_metrics_workflow_gagesII():
 
 
 def giws_download():
+    # ref_sheds = geopandas.read_file(
+    #     'E:/SDSU_GEOG/Thesis/Data/NWI_outputs/Shapefiles/Catchments/camels_gagesII_final_catchments.shp')
+
     ref_sheds = geopandas.read_file(
-        'E:/SDSU_GEOG/Thesis/Data/NWI_outputs/Shapefiles/Catchments/camels_gagesII_final_catchments.shp')
+        'E:/SDSU_GEOG/Thesis/Data/Caravan/shapefiles/hysets/hysets_basin_shapes_nocamels.shp')
 
     # ref_sheds_2 = ref_sheds.loc[:, ['gauge_id', 'geometry']]
 
@@ -343,7 +346,8 @@ def giws_download():
             # note that this is equivalent to intersection rather than clip, so sometimes the features extend
             geodatabase_path = "E:/SDSU_GEOG/Thesis/Data/GIWs/GIWs_CONUS.gdb"
             layer_name = 'GIWs_CONUS_final'
-            out_dir = 'E:/SDSU_GEOG/Thesis/Data/GIWs/GIWs_camels_gagesII'
+            # out_dir = 'E:/SDSU_GEOG/Thesis/Data/GIWs/GIWs_camels_gagesII'
+            out_dir = 'E:/SDSU_GEOG/Thesis/Data/GIWs/GIWs_hysets/downloads'
 
             out_gdf = geopandas.read_file(geodatabase_path, driver='FileGDB', layer=layer_name, mask=single_row_gdf)
             # print(out_gdf)
@@ -370,8 +374,11 @@ def giws_download():
 
 def giws_metrics_workflow():
     # prep nwi data and run metrics calculation for each camels watershed
+    # ref_sheds = geopandas.read_file(
+    #     'E:/SDSU_GEOG/Thesis/Data/NWI_outputs/Shapefiles/Catchments/camels_gagesII_final_catchments.shp')
+
     ref_sheds = geopandas.read_file(
-        'E:/SDSU_GEOG/Thesis/Data/NWI_outputs/Shapefiles/Catchments/camels_gagesII_final_catchments.shp')
+        'E:/SDSU_GEOG/Thesis/Data/Caravan/shapefiles/hysets/hysets_basin_shapes_nocamels.shp')
 
     # ref_sheds = geopandas.read_file('E:/SDSU_GEOG/Thesis/Data/Gages-II/boundaries-shapefiles-by-aggeco/bas_ref_all.shp')
 
@@ -390,7 +397,8 @@ def giws_metrics_workflow():
             shed_gdf = single_row_gdf
             # print(shed_gdf)
 
-            giw_path = 'E:/SDSU_GEOG/Thesis/Data/GIWs/GIWs_camels_gagesII'
+            # giw_path = 'E:/SDSU_GEOG/Thesis/Data/GIWs/GIWs_camels_gagesII'
+            giw_path = 'E:/SDSU_GEOG/Thesis/Data/GIWs/GIWs_hysets/downloads'
             gauge_id = shed_gdf['gauge_id'].iloc[0]
             file_name = gauge_id + '_giws.shp'
             file_path = os.path.join(giw_path, file_name)
@@ -419,7 +427,9 @@ def giws_metrics_workflow():
 
             # export just in case for now
             file_name_export = gauge_id + '_giw_metrics.shp'
-            file_path_export = os.path.join('E:/SDSU_GEOG/Thesis/Data/GIWs/GWIs_outputs',
+            # file_path_export = os.path.join('E:/SDSU_GEOG/Thesis/Data/GIWs/GWIs_outputs',
+            #                                 file_name_export)
+            file_path_export = os.path.join('E:/SDSU_GEOG/Thesis/Data/GIWs/GIWs_hysets/metrics',
                                             file_name_export)
             print(file_path_export)
             shed_final.to_file(file_path_export, index=False)
@@ -432,7 +442,8 @@ def giws_metrics_workflow():
 
     result_gdf = pandas.concat(results, ignore_index=True)
     # print(result_gdf)
-    result_gdf.to_file("E:/SDSU_GEOG/Thesis/Data/GWIs/giws_metrics.shp")
+    # result_gdf.to_file("E:/SDSU_GEOG/Thesis/Data/GWIs/giws_metrics.shp")
+    result_gdf.to_file("E:/SDSU_GEOG/Thesis/Data/GWIs/GIWs_hysets/giws_metrics_hysets.shp")
     # result_gdf.to_file("C:/Users/aholt8450/Documents/Data/NWI_outputs/nwi_gagesII_ref_metrics_new.shp")
 
 
@@ -618,13 +629,13 @@ def sgmc_metrics_workflow_camels():
 def main():
     # nwi_camels_download()
 
-    nwi_metrics_workflow_camels()
+    # nwi_metrics_workflow_camels()
 
     # nwi_gagesII_download()
 
     # nwi_metrics_workflow_gagesII()
 
-    # giws_download()
+    giws_download()
 
     # giws_metrics_workflow()
 
