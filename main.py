@@ -429,10 +429,10 @@ def giws_metrics_workflow():
             file_name_export = gauge_id + '_giw_metrics.shp'
             # file_path_export = os.path.join('E:/SDSU_GEOG/Thesis/Data/GIWs/GWIs_outputs',
             #                                 file_name_export)
-            file_path_export = os.path.join('E:/SDSU_GEOG/Thesis/Data/GIWs/GIWs_hysets/metrics',
+            file_path_export = os.path.join('E:/SDSU_GEOG/Thesis/Data/GIWs/GIWs_hysets/metrics_2',
                                             file_name_export)
             print(file_path_export)
-            shed_final.to_file(file_path_export, index=False)
+            # shed_final.to_file(file_path_export, index=False)
 
             # add to results
             results.append(shed_final)
@@ -443,7 +443,7 @@ def giws_metrics_workflow():
     result_gdf = pandas.concat(results, ignore_index=True)
     # print(result_gdf)
     # result_gdf.to_file("E:/SDSU_GEOG/Thesis/Data/GWIs/giws_metrics.shp")
-    result_gdf.to_file("E:/SDSU_GEOG/Thesis/Data/GWIs/GIWs_hysets/giws_metrics_hysets.shp")
+    result_gdf.to_file("E:/SDSU_GEOG/Thesis/Data/GIWs/GIWs_hysets/giws_metrics_hysets.shp")
     # result_gdf.to_file("C:/Users/aholt8450/Documents/Data/NWI_outputs/nwi_gagesII_ref_metrics_new.shp")
 
 
@@ -635,9 +635,9 @@ def main():
 
     # nwi_metrics_workflow_gagesII()
 
-    giws_download()
+    # giws_download()
 
-    # giws_metrics_workflow()
+    giws_metrics_workflow()
 
     # sgmc_camels_download()
 
