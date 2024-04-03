@@ -8,26 +8,47 @@ library(broom)
 
 ##### looking at the raw SGMC data a bit ####
 
-# geol_dir = "C:/Users/holta/Documents/ArcGIS_Projects/sgmc_explore/data"
-# geol_file = "USGS_StateGeologicMapCompilation_withAge.csv"
-# 
-# # ages in million years ago
-# # calculate average age, between min and max ages
-# 
-# geol_df = read_csv(paste(geol_dir, geol_file, sep = "/")) %>% 
-#   mutate(AV_MA = (MIN_MA + MAX_MA)/2)
-# 
-# geol_sum = geol_df %>% 
-#   # mutate(AV_MA = (MIN_MA + MAX_MA)/2) %>% 
-#   group_by(GENERALIZED_LITH) %>%
-#   summarize(
-#     min_value = min(AV_MA),
-#     max_value = max(AV_MA),
-#     mean_value = mean(AV_MA),
-#     median_value = median(AV_MA),
-#     count = n()
-#   )
+geol_dir = "C:/Users/holta/Documents/ArcGIS_Projects/sgmc_explore/data"
+geol_file = "USGS_StateGeologicMapCompilation_withAge.csv"
 
+# ages in million years ago
+# calculate average age, between min and max ages
+
+geol_df = read_csv(paste(geol_dir, geol_file, sep = "/")) %>%
+  mutate(AV_MA = (MIN_MA + MAX_MA)/2)
+
+geol_sum = geol_df %>%
+  # mutate(AV_MA = (MIN_MA + MAX_MA)/2) %>%
+  group_by(GENERALIZED_LITH) %>%
+  summarize(
+    min_value = min(AV_MA),
+    max_value = max(AV_MA),
+    mean_value = mean(AV_MA),
+    median_value = median(AV_MA),
+    count = n()
+  )
+
+geol_df$GENERALIZED_LITH <- factor(geol_df$GENERALIZED_LITH, 
+                                   levels = names(sort(tapply(geol_df$AV_MA, geol_df$GENERALIZED_LITH, mean), decreasing = TRUE)))
+
+
+ggplot(geol_df, aes(x = GENERALIZED_LITH, y = AV_MA)) +
+  geom_boxplot(position = "dodge") +
+  labs(
+    y = "Average Geologic Age (Ma)",
+    x = "Lithological Classification of Major Geologic Unit",
+  ) +
+  theme_minimal()+
+  theme(
+    plot.title = element_text(size = 24),
+    text = element_text(size = 20),   # Increase text (axis labels, title) size
+    axis.text.x = element_text(angle = 45, hjust = 1),  # Rotate x-axis labels diagonally
+    axis.text.y = element_text(size = 14),  # Adjust y-axis text size
+    legend.position = "left",  # Move legend to the left side
+    legend.title = element_text(size = 20),
+    legend.text = element_text(size = 20),  # Adjust legend text size
+    legend.key.size = unit(2, "lines")  # Adjust the size of the legend color key
+  )
 
 
 ##### HYSETS data ####
@@ -73,6 +94,29 @@ sigs_c_2 = sigs_c %>%
 geol_c = st_read('E:/SDSU_GEOG/Thesis/Data/Geology_outputs/Shapefiles/sgmc_camels_metrics.shp')
 # average age of catchment (age weighted by area of geologic unit type)
 geol_c_av = st_read('E:/SDSU_GEOG/Thesis/Data/Geology_outputs/Shapefiles/sgmc_camels_metrics_age_weighted.shp')
+
+# geol_c$major_lith <- factor(geol_c$major_lith, 
+#                                    levels = names(sort(tapply(geol_c$av_age, geol_c$major_lith, mean), decreasing = TRUE)))
+
+ggplot(geol_c, aes(x = major_lith, y = av_age)) +
+  geom_boxplot(position = "dodge") +
+  labs(
+    y = "Average Geologic Age (Ma)",
+    x = "Lithological Classification of Major Geologic Unit",
+  ) +
+  theme_minimal()+
+  theme(
+    plot.title = element_text(size = 24),
+    text = element_text(size = 20),   # Increase text (axis labels, title) size
+    axis.text.x = element_text(angle = 45, hjust = 1),  # Rotate x-axis labels diagonally
+    axis.text.y = element_text(size = 14),  # Adjust y-axis text size
+    legend.position = "left",  # Move legend to the left side
+    legend.title = element_text(size = 20),
+    legend.text = element_text(size = 20),  # Adjust legend text size
+    legend.key.size = unit(2, "lines")  # Adjust the size of the legend color key
+  )
+
+
 
 
 #### FINAL DATASET FOR PLOTTING AND ANALYSIS ####
@@ -121,7 +165,7 @@ sigs_percentiles = sigs_c_3_long %>%
 
 corr_test = geol_sigs %>% 
   select(av_age, TotalRR, RR_Seasonality, EventRR, Recession_a_Seasonality,
-         AverageStorage, RecessionParameters_a, RecessionParameters_b, RecessionParameters_c, MRC_num_segments,
+         AverageStorage, RecessionParameters_a, RecessionParameters_b, RecessionParameters_T0, MRC_num_segments,
          First_Recession_Slope, Mid_Recession_Slope, Spearmans_rho, EventRR_TotalRR_ratio,
          VariabilityIndex, BFI, BaseflowRecessionK) %>% 
   as.data.frame()
@@ -185,7 +229,7 @@ geol_hysets = st_read('E:/SDSU_GEOG/Thesis/Data/Geology_outputs/Hysets/sgmc_hyse
 
 geol_all = geol_c %>% 
   bind_rows(geol_hysets)
-  
+
 
 # Create a new sf object with points representing the centroids of the polygons
 # centroids_sf <- st_centroid(geol_c)
@@ -205,12 +249,12 @@ ggplot() +
     plot.title = element_text(size = 30, hjust = 0.5),  # Adjust title size and centering
     legend.key.size = unit(2, "lines"),  # Adjust the size of the legend keys
     legend.title = element_text(size = 24),  # Adjust the size of the legend title
-    legend.text = element_text(size = 24),# Adjust the size of the legend text
-    legend.margin = margin(r = 10)
+    legend.text = element_text(size = 24)# Adjust the size of the legend text
   )
 
 
-ggsave("E:/SDSU_GEOG/Thesis/Data/Signatures/figures_final/geol_age_majorlith_all.png", width = 11, height = 6, dpi = 300,bg = "white")
+# ggsave("E:/SDSU_GEOG/Thesis/Data/Signatures/figures_final/geol_age_majorlith_all.png", width = 11, height = 6, dpi = 300,bg = "white")
+
 
 # and major lithologies plot 
 # ggplot() +
@@ -228,6 +272,8 @@ ggsave("E:/SDSU_GEOG/Thesis/Data/Signatures/figures_final/geol_age_majorlith_all
 
 
 #### CORRELATIONS ####
+
+cor_geol <- cor.test(geol_sigs$av_age, geol_sigs$av_age_w, method = "spearman")
 
 corr_av = geol_sigs %>% 
   select(av_age, EventRR, TotalRR, RR_Seasonality, Recession_a_Seasonality, AverageStorage, RecessionParameters_a,
@@ -259,7 +305,7 @@ geol_labels <- c(
 
 ggplot(corr_sigs_geol, aes(x = term, y = 1, color = value, size = abs(value))) +
   geom_point() +
-  scale_color_gradient2(low = "red", mid = "grey", high = "blue", 
+  scale_color_gradient2(low = "blue", mid = "grey", high = "red", 
                         midpoint = mean(corr_sigs_geol$value), name = "Spearman's Rho",
                         limits = c(-0.3, 0.3)) +
   scale_size(range = c(6, 16)) +  # Adjust the overall size scale
@@ -285,5 +331,5 @@ ggplot(corr_sigs_geol, aes(x = term, y = 1, color = value, size = abs(value))) +
   facet_wrap(~ variable, scales = "free_y", nrow = 2, labeller = as_labeller(geol_labels))
 
 
-# ggsave("E:/SDSU_GEOG/Thesis/Data/Signatures/figures_final/sigs_geol_camels.png", width = 10.5, height = 6, dpi = 300,bg = "white")
+ggsave("E:/SDSU_GEOG/Thesis/Data/Signatures/figures_final/sigs_geol_camels.png", width = 10.5, height = 6, dpi = 300,bg = "white")
 
