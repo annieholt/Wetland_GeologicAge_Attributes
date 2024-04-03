@@ -75,6 +75,13 @@ giws = st_read('E:/SDSU_GEOG/Thesis/Data/GIWs/giws_metrics.shp') %>%
   as.data.frame() %>% 
   select(gauge_id, area_frac)
 
+nwi_hysets = st_read('E:/SDSU_GEOG/Thesis/Data/NWI_hysets/nwi_hysets_metrics.shp') %>% 
+  select(gauge_id, shed_area, fresh, lake, other, geometry)
+  
+giws_hysets = st_read('E:/SDSU_GEOG/Thesis/Data/GIWs/GIWs_hysets/giws_metrics_hysets.shp') %>% 
+  as.data.frame() %>% 
+  select(gauge_id, area_frac)
+
 # nwi_metrics = nwi_g %>% 
 #   bind_rows(nwi_c) %>% 
 #   left_join(giws, by = 'gauge_id') %>% 
@@ -86,7 +93,25 @@ nwi_metrics = nwi_c %>%
   left_join(giws, by = 'gauge_id') %>% 
   # some places have zero isolated wetlands, so replace NAs with zero since shapefiles weren't returned for those
   mutate(area_frac = ifelse(is.na(area_frac), 0, area_frac)) %>% 
+  mutate(lake = ifelse(is.na(lake), 0, lake)) %>% 
+  mutate(fresh = ifelse(is.na(fresh), 0, fresh)) %>% 
+  mutate(other = ifelse(is.na(other), 0, other)) %>% 
   mutate(fresh_no_giw = fresh + lake - area_frac)
+
+nwi_metrics_hysets = nwi_hysets %>% 
+  left_join(giws_hysets, by = "gauge_id") %>% 
+  mutate(area_frac = ifelse(is.na(area_frac), 0, area_frac)) %>% 
+  mutate(lake = ifelse(is.na(lake), 0, lake)) %>% 
+  mutate(fresh = ifelse(is.na(fresh), 0, fresh)) %>% 
+  mutate(other = ifelse(is.na(other), 0, other)) %>% 
+  mutate(fresh_no_giw = fresh + lake - area_frac)
+
+
+nwi_metrics_all = nwi_metrics %>% 
+  bind_rows(nwi_metrics_hysets) %>% 
+  mutate(fresh_no_giw = ifelse(fresh_no_giw <0, 0, fresh_no_giw)) 
+  
+  
 
 #### FINAL DATASET FOR PLOTTING AND ANALYSIS ####
 
@@ -129,20 +154,23 @@ ggplot(nwi_sigs_camels, aes(x = fresh_no_giw, y = area_frac)) +
 # ggsave("E:/SDSU_GEOG/Thesis/Data/Signatures/Figures/BaseflowRecessionK_fresh.png", width = 4, height = 3, dpi = 300,bg = "white")
 
 
-cor_wet <- cor.test(nwi_sigs_camels$fresh_no_giw, nwi_sigs_camels$area_frac, method = "spearman", exact = FALSE)
+cor_wet <- cor.test(nwi_metrics_all$fresh_no_giw, nwi_metrics_all$area_frac, method = "spearman", exact = FALSE)
 
 # Print the correlation coefficient and p-value
 cat("Spearman rank correlation coefficient:", cor_wet$estimate, "\n")
 cat("P-value:", cor_wet$p.value, "\n")
 
 
-# cor_spearman <- cor(nwi_sigs_2$fresh_no_giw, nwi_sigs_2$area_frac, method = "spearman")
-# 
-# # Scatter plot
-# plot(nwi_sigs_2$fresh_no_giw, nwi_sigs_2$area_frac, main = "Scatter Plot with Spearman Correlation", 
-#      xlab = "Variable 1", ylab = "Variable 2", pch = 16, col = "blue")
-# text(x = max(nwi_sigs_2$fresh_no_giw), y = max(nwi_sigs_2$area_frac), 
-#      label = paste("Spearman Correlation =", round(cor_spearman, 2)), pos = 4)
+cor_spearman <- cor.test(nwi_sigs_camels$area_frac, nwi_sigs_camels$RecessionParameters_T0, method = "spearman")
+
+
+
+# Scatter plot
+plot(nwi_sigs_camels$area_frac, nwi_sigs_camels$RecessionParameters_T0, main = "Scatter Plot with Spearman Correlation",
+     xlab = "Area frac", ylab = "recession", pch = 16, col = "blue")
+
+text(x = max(nwi_sigs_2$fresh_no_giw), y = max(nwi_sigs_2$area_frac),
+     label = paste("Spearman Correlation =", round(cor_spearman, 2)), pos = 4)
 
 
 corr_iso = nwi_sigs_camels %>% 
@@ -212,7 +240,7 @@ wet_labels <- c(
 
 ggplot(corr_sigs_wet, aes(x = term, y = 1, color = value, size = abs(value))) +
   geom_point() +
-  scale_color_gradient2(low = "red", mid = "grey", high = "blue", 
+  scale_color_gradient2(low = "blue", mid = "grey", high = "red", 
                         midpoint = mean(corr_sigs_wet$value), name = "Spearman's Rho",
                         limits = c(-0.3, 0.3)) +
   scale_size(range = c(6, 16)) +  # Adjust the overall size scale
@@ -287,27 +315,27 @@ ggplot(corr_test_camels, aes(x = term, y = 1, color = fresh_no_giw, size = abs(f
 conus <- st_read('E:/SDSU_GEOG/Thesis/Data/US states/conus_states.shp')
 
 # Create a new sf object with points representing the centroids of the polygons
-centroids_sf <- st_centroid(nwi_metrics)
+# centroids_sf <- st_centroid(nwi_metrics)
+centroids_sf <- st_centroid(nwi_metrics_all)
 
 # Plot the map with polygons represented as dots, colored by the variable
 ggplot() +
   geom_sf(data = conus, color = "white", fill = "grey") +  # Plot polygon boundaries, color by variable
-  geom_sf(data = centroids_sf, aes(fill = fresh_no_giw), shape = 21, color = "darkgrey", size = 4, alpha = 1) +  # Plot centroids as dots, color by variable
+  geom_sf(data = centroids_sf, aes(fill = area_frac), shape = 21, color = "darkgrey", size = 3, alpha = 1) +  # Plot centroids as dots, color by variable
   # scale_fill_distiller(direction=1)+
   # scale_fill_viridis_c()+
-  scale_fill_distiller(palette = "YlGnBu", direction = 1, name = NULL,breaks = seq(0, 0.8, 0.2))+
+  scale_fill_distiller(palette = "YlGnBu", direction = 1, name = NULL,breaks = seq(0, 0.2, 0.05))+
   # scale_fill_gradient(low = "white", high = "blue4") +  # Set color scale
-  ggtitle("Connected Wetland Area Fraction") +
+  ggtitle("Isolated Wetland Area Fraction") +
   theme_void()+
   theme(
     plot.title = element_text(size = 30, hjust = 0.5),  # Adjust title size and centering
     legend.key.size = unit(2, "lines"),  # Adjust the size of the legend keys
     legend.title = element_text(size = 24),  # Adjust the size of the legend title
-    legend.text = element_text(size = 24),# Adjust the size of the legend text
-    legend.margin = margin(r = 10)
+    legend.text = element_text(size = 24)# Adjust the size of the legend text
   )
 
-ggsave("E:/SDSU_GEOG/Thesis/Data/Signatures/figures_final/connected_camels.png", width = 11, height = 6, dpi = 300,bg = "white")
+# ggsave("E:/SDSU_GEOG/Thesis/Data/Signatures/figures_final/isolated_all.png", width = 11, height = 6, dpi = 300,bg = "white")
 
 
 
