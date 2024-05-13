@@ -152,7 +152,7 @@ geol_sigs = sigs_c_2 %>%
   rename(av_age = av_age_w)
 
 geol_sigs_lith= sigs_c_2 %>%
-  left_join(geol_c %>% select(-shed_area, -lith_area_), by = c('gauge_id')) %>%
+  left_join(geol_c_lith %>% select(-shed_area, -lith_area_), by = c('gauge_id')) %>%
   left_join(geol_c_av %>% select(gauge_id, av_age_w), by = c('gauge_id', 'geometry')) %>% 
   rename(av_age_lith = av_age) %>% 
   rename(av_age = av_age_w)
@@ -161,6 +161,7 @@ geol_sigs_lith= sigs_c_2 %>%
 # sanity checking signature calculations
 
 sigs_c_3_long = sigs_c_2 %>% 
+  select(gauge_id, AverageStorage, BaseflowRecessionK, BFI, BFI_90, Recession_a_Seasonality, TotalRR) %>%
   pivot_longer(-gauge_id, names_to = "signature")
 
 # Creating a ggplot of distributions
@@ -211,12 +212,13 @@ for (sig in unique(sigs_c_3_long$signature)) {
 }
 
 # Combine scatterplots into a single plot
-sig_combined_plot <- cowplot::plot_grid(plotlist = sig_scatterplot_list, nrow = 4)
+sig_combined_plot <- cowplot::plot_grid(plotlist = sig_scatterplot_list, nrow = 2)
 
 # Print the combined plot
 print(sig_combined_plot)
 
 # ggsave("E:/SDSU_GEOG/Thesis/Data/Signatures/figures_final/sig_distributions_v2.png", width = 16, height = 8, dpi = 300,bg = "white")
+# ggsave("E:/SDSU_GEOG/Thesis/Data/Signatures/figures_v2/sig_distributions.png", width = 7, height = 4, dpi = 300,bg = "white")
 
 
 
@@ -251,19 +253,21 @@ cor_results <- corr_test %>%
   mutate(p.value = format(p.value, scientific = FALSE))
 
 corr_lith = geol_sigs_lith %>% 
-  filter(grepl('Sedimentary, clastic', major_lith)) %>%
+  filter(grepl('Sedimentary, carbonate', major_lith)) %>%
   # filter(!grepl('Igneous|Sedimentary, clastic', major_lith))
-  select(av_age_lith, TotalRR, RR_Seasonality, EventRR, Recession_a_Seasonality,
+  select(av_age, TotalRR, RR_Seasonality, EventRR, Recession_a_Seasonality,
          AverageStorage, RecessionParameters_a, RecessionParameters_b, RecessionParameters_T0,
          First_Recession_Slope, Mid_Recession_Slope, EventRR_TotalRR_ratio,
          VariabilityIndex, BFI, BFI_90, BaseflowRecessionK) %>% 
+  select(av_age, TotalRR,Recession_a_Seasonality,
+         AverageStorage, BFI, BFI_90, BaseflowRecessionK) %>% 
   as.data.frame()
   
 
 cor_results_lith <- corr_lith %>%
-  gather(variable, value, -av_age_lith) %>%
+  gather(variable, value, -av_age) %>%
   group_by(variable) %>%
-  do(tidy(cor.test(.$value, .$av_age_lith, method = "spearman"))) %>%
+  do(tidy(cor.test(.$value, .$av_age, method = "spearman"))) %>%
   select(variable, estimate, p.value) %>% 
   mutate(p.value = format(p.value, scientific = FALSE))
 
@@ -274,28 +278,31 @@ ggplot(cor_results_lith, aes(x = variable, y = 1, color = estimate, size = abs(e
   geom_point() +
   scale_color_gradient2(low = "blue", mid = "grey", high = "red", 
                         midpoint = mean(cor_results$estimate), name = "Spearman's Rho",
-                        limits = c(-0.6, 0.6)) +
+                        limits = c(-0.7, 0.7)) +
   scale_size(range = c(6, 16)) +  # Adjust the overall size scale
   labs(
     y = NULL,  # No y-axis label
     x = NULL,
   ) +
-  ggtitle("Correlations with Geologic Age, Sedimentary clastic") +  # Add plot title
+  ggtitle("Correlations with Geologic Age, Sedimentary carbonate") +  # Add plot title
   theme_minimal() +                    # Use a minimal theme
   theme(
-    plot.title = element_text(size=24),
+    plot.title = element_text(size=16),
+    # plot.title = element_text(size=24),
     text = element_text(size = 20),   # Increase text (axis labels, title) size
     axis.title = element_text(size = 14),  # Increase axis title sizehttp://127.0.0.1:42413/graphics/plot_zoom_png?width=619&height=258
     axis.text.x = element_text(angle = 45, hjust = 1),  # Rotate x-axis labels diagonally
     axis.text.y = element_blank(),  # Remove y-axis values
     legend.position = "left",  # Move legend to the left side
-    legend.title = element_text(size = 20),
+    legend.title = element_text(size = 14),
+    # legend.title = element_text(size = 20),
     legend.text = element_text(size = 20),  # Adjust legend text size
     legend.key.size = unit(2, "lines")  # Adjust the size of the legend color key
   ) +
   guides(size = FALSE)+
   coord_cartesian(ylim = c(1, 1))
 
+ggsave("E:/SDSU_GEOG/Thesis/Data/Signatures/figures_v2/geol_age_sedimentary_carb_spearmans.png", width = 8, height = 5, dpi = 300,bg = "white")
 
 # ggsave("E:/SDSU_GEOG/Thesis/Data/Signatures/figures_geology/geol_age_sedimentary_spearmans.png", width = 10.5, height = 5, dpi = 300,bg = "white")
 
@@ -354,17 +361,19 @@ ggplot() +
 cor_geol <- cor.test(geol_sigs$av_age, geol_sigs$av_age_lith, method = "spearman")
 
 corr_av = geol_sigs %>% 
-  select(av_age, EventRR, TotalRR, RR_Seasonality, Recession_a_Seasonality, AverageStorage, RecessionParameters_a,
-         RecessionParameters_b, RecessionParameters_T0, First_Recession_Slope, Mid_Recession_Slope, EventRR_TotalRR_ratio,
-         VariabilityIndex, BaseflowRecessionK, BFI, BFI_90) %>% 
+  # select(av_age, EventRR, TotalRR, RR_Seasonality, Recession_a_Seasonality, AverageStorage, RecessionParameters_a,
+  #        RecessionParameters_b, RecessionParameters_T0, First_Recession_Slope, Mid_Recession_Slope, EventRR_TotalRR_ratio,
+  #        VariabilityIndex, BaseflowRecessionK, BFI, BFI_90) %>% 
+  select(av_age, TotalRR, Recession_a_Seasonality, AverageStorage,BaseflowRecessionK, BFI, BFI_90) %>% 
   as.data.frame() %>% 
   correlate(method = "spearman") %>% 
   focus(av_age)
 
 corr_av_lith = geol_sigs %>% 
-  select(av_age_lith, EventRR, TotalRR, RR_Seasonality, Recession_a_Seasonality, AverageStorage, RecessionParameters_a,
-         RecessionParameters_b, RecessionParameters_T0, First_Recession_Slope, Mid_Recession_Slope, EventRR_TotalRR_ratio,
-         VariabilityIndex, BaseflowRecessionK, BFI, BFI_90) %>% 
+  # select(av_age_lith, EventRR, TotalRR, RR_Seasonality, Recession_a_Seasonality, AverageStorage, RecessionParameters_a,
+  #        RecessionParameters_b, RecessionParameters_T0, First_Recession_Slope, Mid_Recession_Slope, EventRR_TotalRR_ratio,
+  #        VariabilityIndex, BaseflowRecessionK, BFI, BFI_90) %>% 
+  select(av_age_lith, TotalRR, Recession_a_Seasonality, AverageStorage,BaseflowRecessionK, BFI, BFI_90) %>% 
   as.data.frame() %>% 
   correlate(method = "spearman") %>% 
   focus(av_age_lith)
@@ -410,6 +419,7 @@ ggplot(corr_sigs_geol, aes(x = term, y = 1, color = value, size = abs(value))) +
 
 
 # ggsave("E:/SDSU_GEOG/Thesis/Data/Signatures/figures_final/sigs_geol_camels.png", width = 10.5, height = 6, dpi = 300,bg = "white")
+# ggsave("E:/SDSU_GEOG/Thesis/Data/Signatures/figures_v2/sigs_geol_camels.png", width = 8, height = 6, dpi = 300,bg = "white")
 
 
 
@@ -444,6 +454,7 @@ shapiro.test(lm_test$residuals)
 geol_sigs_camels_plotting = geol_sigs_lith %>% 
   as.data.frame() %>% 
   select(-geometry) %>% 
+  select(gauge_id, av_age, av_age_lith, major_lith, TotalRR, Recession_a_Seasonality, AverageStorage,BaseflowRecessionK, BFI, BFI_90) %>% 
   # filter(grepl('Igneous', major_lith)) %>%
   filter(major_lith == "Sedimentary, clastic" | major_lith == "Igneous, volcanic" | major_lith == "Sedimentary, carbonate")
   # select(-major_lith)
@@ -454,7 +465,8 @@ geol_sigs_camels_long <- pivot_longer(geol_sigs_camels_plotting, cols = c(-av_ag
 # Create scatterplot with facetting
 geol_sigs_scatterplot <- ggplot(geol_sigs_camels_long, aes(x = av_age, y = sig_value, color = major_lith)) +
   geom_point(size = 4, shape = 21) +  # Increase the size of dots
-  facet_wrap(~ signature, scales = "free", ncol = 5) +  # Facet by the variable
+  # facet_wrap(~ signature, scales = "free", ncol = 5) +  # Facet by the variable
+  facet_wrap(~ signature, scales = "free", ncol = 3) +  # Facet by the variable
   xlab("Average Geologic Age") +
   ylab("Signature") +
   # scale_x_continuous(limits = c(0, 24))+
@@ -472,7 +484,9 @@ print(geol_sigs_scatterplot)
 
 ggplot(geol_sigs_camels_long, aes(x = sig_value, color = major_lith)) +
   geom_density(lwd = 2, alpha = 0.7) +  # Adjust line thickness with lwd and transparency with alpha
-  facet_wrap(~ signature, scales = "free", ncol = 5, strip.position = "bottom") +
+  # facet_wrap(~ signature, scales = "free", ncol = 5, strip.position = "bottom") +
+  facet_wrap(~ signature, scales = "free", ncol = 3, strip.position = "bottom") +
+  
   # scale_color_manual(values = c("class 1" = "darkgrey", "class 2" = "orange", "class 3" = "purple"),
   #                    name = str_wrap("Percent Isolated Wetlands", width = 16),
   #                    labels = c("< 0.1%", "0.1-1%", ">1%")) +  # Specify specific colors
@@ -483,18 +497,37 @@ ggplot(geol_sigs_camels_long, aes(x = sig_value, color = major_lith)) +
     panel.grid.major = element_blank(),
     panel.grid.minor = element_blank(),
     axis.line = element_line(),
-    strip.text = element_text(size = 12, margin = margin(t = 5, b = 5)),  # Increase label size
+    strip.text = element_text(size = 11, margin = margin(t = 5, b = 5)),  # Increase label size
     strip.background = element_blank(),
     strip.placement = "outside",
     axis.text.x = element_text(vjust = 0, size = 10),  # Increase X-axis label size
     axis.text.y = element_blank(),
-    legend.text = element_text(size = 14),  # Increase legend text size
-    legend.title = element_text(size = 14)  # Increase legend title size
+    legend.text = element_text(size = 11),  # Increase legend text size
+    legend.title = element_text(size = 11)  # Increase legend title size
   )
 
-# ggsave("E:/SDSU_GEOG/Thesis/Data/Signatures/figures_final/connected_sig_distributions.png", width = 12, height = 6, dpi = 300,bg = "white")
+# ggsave("E:/SDSU_GEOG/Thesis/Data/Signatures/figures_v2/major_lith_sig_distributions.png", width = 8, height = 4, dpi = 300,bg = "white")
 
 
+
+ggplot(geol_sigs_camels_long, aes(y = av_age, x = major_lith)) +
+  geom_boxplot() +
+  # facet_wrap(~ signature, scales = "free", ncol = 3, strip.position = "bottom") +
+  xlab(NULL) +
+  ylab("Average Geologic Age (Ma)") +
+  theme_minimal()+
+  theme(
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(),
+    strip.text = element_text(size = 14, margin = margin(t = 5, b = 5)),
+    strip.background = element_blank(),
+    strip.placement = "outside",
+    axis.text.x = element_text(vjust = 0, size = 12),  # Increase X-axis label size
+    axis.text.y = element_text(size = 12)  # Increase Y-axis label size
+  )
+
+# ggsave("E:/SDSU_GEOG/Thesis/Data/Signatures/figures_v2/major_lith_age_distributions.png", width = 8, height = 4, dpi = 300,bg = "white")
 
 
 
