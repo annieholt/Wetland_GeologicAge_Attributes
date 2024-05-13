@@ -4,6 +4,8 @@ library(tidyverse)
 library(sf)
 # library(ggplot2)
 library(corrr)
+library(broom)
+library(cowplot)
 # library(gridExtra)
 
 # Gages II signature data appending
@@ -171,6 +173,20 @@ cat("P-value:", cor_wet$p.value, "\n")
 
 cor_spearman <- cor.test(nwi_sigs_camels$area_frac, nwi_sigs_camels$RecessionParameters_T0, method = "spearman")
 
+# correlations, include p-value for significance
+cor_test <- nwi_sigs_camels %>%
+  select(fresh_no_giw, TotalRR, RR_Seasonality, EventRR, Recession_a_Seasonality,
+         AverageStorage, RecessionParameters_a, RecessionParameters_b, RecessionParameters_T0,
+         First_Recession_Slope, Mid_Recession_Slope, EventRR_TotalRR_ratio,
+         VariabilityIndex, BFI, BFI_90, BaseflowRecessionK) %>% 
+  as.data.frame() %>% 
+  select(-geometry) %>% 
+  gather(variable, value, -fresh_no_giw) %>% 
+  group_by(variable) %>%
+  do(tidy(cor.test(.$value, .$fresh_no_giw, method = "spearman"))) %>%
+  select(variable, estimate, p.value) %>% 
+  mutate(p.value = format(p.value, scientific = FALSE))
+
 
 
 corr_iso = nwi_sigs_camels %>% 
@@ -205,7 +221,10 @@ corr_total = nwi_sigs_camels %>%
 corr_sigs_wet = corr_iso %>% 
   left_join(corr_con) %>% 
   select(term, area_frac, fresh_no_giw) %>% 
-  gather(key = "variable", value = "value", area_frac, fresh_no_giw)
+  gather(key = "variable", value = "value", area_frac, fresh_no_giw) %>% 
+  filter(term == "BFI" | term == "BFI_90" | term == "Recession_a_Seasonality" | term == "AverageStorage" | term == "TotalRR" | term == "BaseflowRecessionK")
+
+
 
 
 cor_sigs <- cor.test(nwi_sigs_camels$area_frac, nwi_sigs_camels$VariabilityIndex, method = "spearman", exact = FALSE)
@@ -251,7 +270,7 @@ wet_labels <- c(
 ggplot(corr_sigs_wet, aes(x = term, y = 1, color = value, size = abs(value))) +
   geom_point() +
   scale_color_gradient2(low = "blue", mid = "grey", high = "red", 
-                        midpoint = mean(corr_sigs_wet$value), name = "Spearman's Rho",
+                        midpoint = 0, name = "Spearman's Rho",
                         limits = c(-0.3, 0.3)) +
   scale_size(range = c(6, 16)) +  # Adjust the overall size scale
   labs(
@@ -275,6 +294,7 @@ ggplot(corr_sigs_wet, aes(x = term, y = 1, color = value, size = abs(value))) +
   # coord_cartesian(ylim = c(1, 1))
   facet_wrap(~ variable, scales = "free_y", nrow = 2, labeller = as_labeller(wet_labels))
 
+# ggsave("E:/SDSU_GEOG/Thesis/Data/Signatures/figures_v2/sigs_wetlands_camels.png", width = 8, height = 6, dpi = 300,bg = "white")
 
 # ggsave("E:/SDSU_GEOG/Thesis/Data/Signatures/figures_final/sigs_wetlands_camels.png", width = 10.5, height = 6, dpi = 300,bg = "white")
 
@@ -313,7 +333,11 @@ ggplot(corr_total, aes(x = term, y = 1, color = fresh_total, size = abs(fresh_to
 
 nwi_sigs_camels_plotting = nwi_sigs_camels %>% 
   as.data.frame() %>% 
-  select(-geometry)
+  select(-geometry) %>% 
+  select(gauge_id, area_frac, fresh_no_giw, AverageStorage, BaseflowRecessionK, BFI, BFI_90, TotalRR,
+         Recession_a_Seasonality)
+
+  # mutate(area_frac = sqrt(area_frac))
 
 # Reshape the data into long format
 nwi_sigs_camels_long <- pivot_longer(nwi_sigs_camels_plotting, cols = c(-area_frac,-fresh_no_giw, -gauge_id), names_to = "signature", values_to = "sig_value")
@@ -321,7 +345,7 @@ nwi_sigs_camels_long <- pivot_longer(nwi_sigs_camels_plotting, cols = c(-area_fr
 # Create scatterplot with facetting
 nwi_sigs_scatterplot <- ggplot(nwi_sigs_camels_long, aes(x = area_frac, y = sig_value)) +
   geom_point(size = 4, color = 'black', shape = 21) +  # Increase the size of dots
-  facet_wrap(~ signature, scales = "free", ncol = 5) +  # Facet by the variable
+  facet_wrap(~ signature, scales = "free", ncol = 3) +  # Facet by the variable
   xlab("Isolated Wetland Area Fraction") +
   ylab("Signature") +
   theme_minimal()
@@ -332,6 +356,62 @@ nwi_sigs_scatterplot <- ggplot(nwi_sigs_camels_long, aes(x = area_frac, y = sig_
   # )
 
 print(nwi_sigs_scatterplot)
+
+ggsave("E:/SDSU_GEOG/Thesis/Data/Signatures/figures_v2/sigs_isolated_camels_scatterplot.png", width = 10.5, height = 6, dpi = 300,bg = "white")
+
+
+# same plot, but add axis limits for each signature
+
+# signature = c('EventRR', 'TotalRR', 'RR_Seasonality', 'Recession_a_Seasonality', 'AverageStorage',
+#               'RecessionParameters_a', 'RecessionParameters_b', 'RecessionParameters_T0',
+#               'First_Recession_Slope', 'Mid_Recession_Slope','EventRR_TotalRR_ratio',
+#               'VariabilityIndex', 'BaseflowRecessionK',
+#               'BFI', 'BFI_90')
+# x_max = c(1, 1, 5, 6, 550, 2, 6, 60, 2, 1, 1, 1, 0.5, 1, 1)
+
+signature = c('TotalRR', 'Recession_a_Seasonality', 'AverageStorage', 'BaseflowRecessionK',
+              'BFI', 'BFI_90')
+x_max = c(1, 6, 550, 0.5, 1, 1)
+sig_limits = data.frame(signature, x_max)
+
+
+# List to store individual scatterplots
+sig_scatterplot_list <- list()
+
+# Loop through each variable
+for (sig in unique(nwi_sigs_camels_long$signature)) {
+  
+  # filter dataset by sig
+  df = nwi_sigs_camels_long[nwi_sigs_camels_long$signature == sig, ]
+  x_max_df = sig_limits[sig_limits$signature == sig, ]
+  x_max = x_max_df$x_max
+  print(x_max)
+  
+  # Create scatterplot for current variable
+  scatterplot <- ggplot(df, aes(x = area_frac, y = sig_value)) +
+    geom_point(size = 4, color = 'black', shape = 21)+
+    # ggtitle(sig) +
+    ylim(0, x_max) +
+    theme_bw()+
+    xlab("Isolated Wetland Area Fraction")+
+    ylab(sig)
+  
+  # Add scatterplot to list
+  sig_scatterplot_list[[sig]] <- scatterplot
+}
+
+# Combine scatterplots into a single plot
+sig_combined_plot <- cowplot::plot_grid(plotlist = sig_scatterplot_list, nrow = 2)
+
+# Print the combined plot
+print(sig_combined_plot)
+
+ggsave("E:/SDSU_GEOG/Thesis/Data/Signatures/figures_v2/sigs_isolated_camels_scatterplot.png", width = 9, height = 5, dpi = 300,bg = "white")
+
+
+
+
+
 
 ## BOXPLOTS ##
 
