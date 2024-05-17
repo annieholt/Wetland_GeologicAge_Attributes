@@ -212,7 +212,7 @@ for (sig in unique(sigs_c_3_long$signature)) {
 }
 
 # Combine scatterplots into a single plot
-sig_combined_plot <- cowplot::plot_grid(plotlist = sig_scatterplot_list, nrow = 2)
+sig_combined_plot <- cowplot::plot_grid(plotlist = sig_scatterplot_list, nrow = 3)
 
 # Print the combined plot
 print(sig_combined_plot)
@@ -235,7 +235,7 @@ sigs_percentiles = sigs_c_3_long %>%
 #### CORRELATIONS, single geologic age metric at a time #### 
 
 corr_test = geol_sigs %>% 
-  select(av_age, TotalRR, RR_Seasonality, EventRR, Recession_a_Seasonality,
+  select(av_age_lith, TotalRR, RR_Seasonality, EventRR, Recession_a_Seasonality,
          AverageStorage, RecessionParameters_a, RecessionParameters_b, RecessionParameters_T0,
          First_Recession_Slope, Mid_Recession_Slope, EventRR_TotalRR_ratio,
          VariabilityIndex, BFI, BFI_90, BaseflowRecessionK) %>% 
@@ -246,11 +246,14 @@ corr_test = geol_sigs %>%
 
 
 cor_results <- corr_test %>%
-  gather(variable, value, -av_age) %>%
+  gather(variable, value, -av_age_lith) %>%
   group_by(variable) %>%
-  do(tidy(cor.test(.$value, .$av_age, method = "spearman"))) %>%
+  do(tidy(cor.test(.$value, .$av_age_lith, method = "spearman"))) %>%
   select(variable, estimate, p.value) %>% 
   mutate(p.value = format(p.value, scientific = FALSE))
+
+write.csv(cor_results, "E:/SDSU_GEOG/Thesis/Data/Signatures/figures_v2/sig_av_ag_lith_corr.csv")
+
 
 corr_lith = geol_sigs_lith %>% 
   filter(grepl('Sedimentary, carbonate', major_lith)) %>%
@@ -451,16 +454,70 @@ shapiro.test(lm_test$residuals)
 
 #### SCATTERPLOTS, BOXPLOTS, HISTOGRAMS ####
 
+
+camels_attribs = read.csv("E:/SDSU_GEOG/Thesis/Data/RandomForest_R/inputs/camels_attribs_addor18.csv",
+                          colClasses = c(gauge_id = "character"))
+camels_eco = read.csv("E:/SDSU_GEOG/Thesis/Data/RandomForest_R/inputs/camels_ecoregions.csv", colClasses = c(gauge_id = "character"))
+
+
+# for zooming in on relationships....
+
 geol_sigs_camels_plotting = geol_sigs_lith %>% 
   as.data.frame() %>% 
   select(-geometry) %>% 
   select(gauge_id, av_age, av_age_lith, major_lith, TotalRR, Recession_a_Seasonality, AverageStorage,BaseflowRecessionK, BFI, BFI_90) %>% 
   # filter(grepl('Igneous', major_lith)) %>%
-  filter(major_lith == "Sedimentary, clastic" | major_lith == "Igneous, volcanic" | major_lith == "Sedimentary, carbonate")
+  filter(major_lith == "Igneous, volcanic" | major_lith == "Sedimentary, carbonate") %>%
   # select(-major_lith)
+  filter(major_lith == "Sedimentary, carbonate") %>%
+  # filter(av_age < 40) %>%
+  left_join(camels_attribs %>% select(gauge_id, geol_porostiy, geol_permeability, carbonate_rocks_frac), by = "gauge_id") %>% 
+  select(gauge_id, av_age, av_age_lith, major_lith, carbonate_rocks_frac, geol_porostiy, geol_permeability, BFI, BFI_90) 
+
+
+# geol_sigs_camels_plotting = geol_sigs_lith %>% 
+#   as.data.frame() %>% 
+#   select(-geometry) %>% 
+#   select(gauge_id, av_age, av_age_lith, major_lith, TotalRR, Recession_a_Seasonality, AverageStorage,BaseflowRecessionK, BFI, BFI_90) %>% 
+#   left_join(camels_eco, by = "gauge_id") %>% 
+#   filter(major_lith == "Igneous, volcanic" | major_lith == "Sedimentary, clastic") %>%
+#   filter(major_lith == "Sedimentary, clastic") %>%
+#   filter(av_age < 500) %>%
+#   # filter(NA_L1KEY =="8  EASTERN TEMPERATE FORESTS") %>%
+#   select(gauge_id, av_age, av_age_lith, major_lith,NA_L1KEY,BFI, BFI_90)
 
 # Reshape the data into long format
-geol_sigs_camels_long <- pivot_longer(geol_sigs_camels_plotting, cols = c(-av_age_lith,-av_age, -major_lith,-gauge_id), names_to = "signature", values_to = "sig_value")
+geol_sigs_camels_long <- pivot_longer(geol_sigs_camels_plotting, cols = c(-av_age_lith,-av_age, -major_lith,-gauge_id, -carbonate_rocks_frac,
+                                                                          -geol_permeability, -geol_porostiy), names_to = "signature", values_to = "sig_value")
+
+# Reshape the data into long format
+# geol_sigs_camels_long <- pivot_longer(geol_sigs_camels_plotting, cols = c(-av_age_lith,-av_age, -major_lith,-gauge_id, -NA_L1KEY), names_to = "signature", values_to = "sig_value")
+
+# Create scatterplot with facetting
+geol_sigs_scatterplot <- ggplot(geol_sigs_camels_long, aes(x = av_age, y = sig_value, fill = geol_permeability)) +
+  geom_point(size = 4, shape = 24, color = "black", stroke = 0.5) +  # Increase the size of dots
+  # facet_wrap(~ signature, scales = "free", ncol = 5) +  # Facet by the variable
+  facet_wrap(~ signature, scales = "free", ncol = 3) +  # Facet by the variable
+  xlab("Average Geologic Age") +
+  ylab("Signature Value") +
+  # scale_color_gradient(limits = c(0, 0.28), low = "orange", high = "blue") +
+  scale_fill_gradient(limits = c(-17, -10), low = "red", high = "blue")+  
+  labs(fill = "Permeability (log10)") +
+  # scale_x_continuous(limits = c(0, 24))+
+  theme_minimal()
+  # theme(legend.position = "none")
+  # theme(
+  #   axis.title.x = element_text(margin = margin(t = 10)),  # Increase space below X-axis label
+  #   axis.title.y = element_text(margin = margin(r = 10)),  # Increase space to the right of Y-axis label
+  #   plot.margin = margin(20, 20, 20, 20)  # Adjust overall plot margin
+  # )
+
+# Print the scatterplot
+print(geol_sigs_scatterplot)
+
+ggsave("E:/SDSU_GEOG/Thesis/Data/Signatures/figures_v2/geol_age_BFI_igneous_scatterplot.png", width = 10, height = 4, dpi = 300,bg = "white")
+
+
 
 # Create scatterplot with facetting
 geol_sigs_scatterplot <- ggplot(geol_sigs_camels_long, aes(x = av_age, y = sig_value, color = major_lith)) +
@@ -479,6 +536,8 @@ geol_sigs_scatterplot <- ggplot(geol_sigs_camels_long, aes(x = av_age, y = sig_v
 
 # Print the scatterplot
 print(geol_sigs_scatterplot)
+
+
 
 # ggsave("E:/SDSU_GEOG/Thesis/Data/Signatures/figures_final/geol_age_sig_scatterplot.png", width = 16, height = 8, dpi = 300,bg = "white")
 
@@ -510,7 +569,7 @@ ggplot(geol_sigs_camels_long, aes(x = sig_value, color = major_lith)) +
 
 
 
-ggplot(geol_sigs_camels_long, aes(y = av_age, x = major_lith)) +
+ggplot(geol_sigs_camels_long, aes(y = geol_permeability, x = major_lith)) +
   geom_boxplot() +
   # facet_wrap(~ signature, scales = "free", ncol = 3, strip.position = "bottom") +
   xlab(NULL) +
