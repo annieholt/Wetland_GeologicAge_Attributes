@@ -161,7 +161,8 @@ geol_sigs_lith= sigs_c_2 %>%
 # sanity checking signature calculations
 
 sigs_c_3_long = sigs_c_2 %>% 
-  select(gauge_id, AverageStorage, BaseflowRecessionK, BFI, BFI_90, Recession_a_Seasonality, TotalRR) %>%
+  select(-RecessionParameters_a) %>% 
+  # select(gauge_id, AverageStorage, BaseflowRecessionK, BFI, BFI_90, Recession_a_Seasonality, TotalRR) %>%
   pivot_longer(-gauge_id, names_to = "signature")
 
 # Creating a ggplot of distributions
@@ -178,11 +179,11 @@ ggplot(sigs_c_3_long, aes(x = value)) +
 # create dataframe, with signature and min/max values
 
 signature = c('EventRR', 'TotalRR', 'RR_Seasonality', 'Recession_a_Seasonality', 'AverageStorage',
-                          'RecessionParameters_a', 'RecessionParameters_b', 'RecessionParameters_T0',
+              'RecessionParameters_b', 'RecessionParameters_T0',
                           'First_Recession_Slope', 'Mid_Recession_Slope','EventRR_TotalRR_ratio',
                           'VariabilityIndex', 'BaseflowRecessionK',
                           'BFI', 'BFI_90')
-x_max = c(1, 1, 5, 6, 550, 2, 6, 60, 2, 1, 1, 1, 0.5, 1, 1)
+x_max = c(1, 1, 5, 6, 550, 6, 60, 2, 1, 1, 1, 0.5, 1, 1)
 sig_limits = data.frame(signature, x_max)
 
 # List to store individual scatterplots
@@ -217,7 +218,7 @@ sig_combined_plot <- cowplot::plot_grid(plotlist = sig_scatterplot_list, nrow = 
 # Print the combined plot
 print(sig_combined_plot)
 
-# ggsave("E:/SDSU_GEOG/Thesis/Data/Signatures/figures_final/sig_distributions_v2.png", width = 16, height = 8, dpi = 300,bg = "white")
+ggsave("E:/SDSU_GEOG/Thesis/Data/Signatures/figures_final/sig_distributions_v2.png", width = 16, height = 8, dpi = 300,bg = "white")
 # ggsave("E:/SDSU_GEOG/Thesis/Data/Signatures/figures_v2/sig_distributions.png", width = 7, height = 4, dpi = 300,bg = "white")
 
 
