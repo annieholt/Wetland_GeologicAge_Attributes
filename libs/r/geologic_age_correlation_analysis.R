@@ -236,7 +236,7 @@ sigs_percentiles = sigs_c_3_long %>%
 #### CORRELATIONS, single geologic age metric at a time #### 
 
 corr_test = geol_sigs %>% 
-  select(av_age_lith, TotalRR, RR_Seasonality, EventRR, Recession_a_Seasonality,
+  select(av_age, TotalRR, RR_Seasonality, EventRR, Recession_a_Seasonality,
          AverageStorage, RecessionParameters_a, RecessionParameters_b, RecessionParameters_T0,
          First_Recession_Slope, Mid_Recession_Slope, EventRR_TotalRR_ratio,
          VariabilityIndex, BFI, BFI_90, BaseflowRecessionK) %>% 
@@ -247,13 +247,14 @@ corr_test = geol_sigs %>%
 
 
 cor_results <- corr_test %>%
-  gather(variable, value, -av_age_lith) %>%
+  gather(variable, value, -av_age) %>%
   group_by(variable) %>%
-  do(tidy(cor.test(.$value, .$av_age_lith, method = "spearman"))) %>%
+  do(tidy(cor.test(.$value, .$av_age, method = "spearman"))) %>%
   select(variable, estimate, p.value) %>% 
-  mutate(p.value = format(p.value, scientific = FALSE))
+  mutate(across(where(is.numeric), signif, 2))
 
-write.csv(cor_results, "E:/SDSU_GEOG/Thesis/Data/Signatures/figures_v2/sig_av_ag_lith_corr.csv")
+
+# write.csv(cor_results, "E:/SDSU_GEOG/Thesis/Data/Signatures/figures_v2/sig_av_ag_corr.csv")
 
 
 corr_lith = geol_sigs_lith %>% 
@@ -470,8 +471,8 @@ geol_sigs_camels_plotting = geol_sigs_lith %>%
   # filter(grepl('Igneous', major_lith)) %>%
   filter(major_lith == "Igneous, volcanic" | major_lith == "Sedimentary, carbonate") %>%
   # select(-major_lith)
-  filter(major_lith == "Sedimentary, carbonate") %>%
-  # filter(av_age < 40) %>%
+  filter(major_lith == "Igneous, volcanic") %>%
+  filter(av_age < 40) %>%
   left_join(camels_attribs %>% select(gauge_id, geol_porostiy, geol_permeability, carbonate_rocks_frac), by = "gauge_id") %>% 
   select(gauge_id, av_age, av_age_lith, major_lith, carbonate_rocks_frac, geol_porostiy, geol_permeability, BFI, BFI_90) 
 
@@ -496,16 +497,17 @@ geol_sigs_camels_long <- pivot_longer(geol_sigs_camels_plotting, cols = c(-av_ag
 
 # Create scatterplot with facetting
 geol_sigs_scatterplot <- ggplot(geol_sigs_camels_long, aes(x = av_age, y = sig_value, fill = geol_permeability)) +
-  geom_point(size = 4, shape = 24, color = "black", stroke = 0.5) +  # Increase the size of dots
+  geom_point(size = 4, shape = 21, color = "white", stroke = 0.5) +  # Increase the size of dots
   # facet_wrap(~ signature, scales = "free", ncol = 5) +  # Facet by the variable
+  scale_y_continuous(limits = c(0, 1))+
   facet_wrap(~ signature, scales = "free", ncol = 3) +  # Facet by the variable
-  xlab("Average Geologic Age") +
+  xlab("Average Geologic Age (Ma)") +
   ylab("Signature Value") +
   # scale_color_gradient(limits = c(0, 0.28), low = "orange", high = "blue") +
-  scale_fill_gradient(limits = c(-17, -10), low = "red", high = "blue")+  
+  scale_fill_gradient(limits = c(-15, -11), low = "red", high = "blue")+  
   labs(fill = "Permeability (log10)") +
-  # scale_x_continuous(limits = c(0, 24))+
-  theme_minimal()
+  theme_minimal()+
+  theme(plot.margin = margin(20, 20, 20, 20), panel.spacing = unit(2, "lines"))
   # theme(legend.position = "none")
   # theme(
   #   axis.title.x = element_text(margin = margin(t = 10)),  # Increase space below X-axis label
@@ -516,7 +518,7 @@ geol_sigs_scatterplot <- ggplot(geol_sigs_camels_long, aes(x = av_age, y = sig_v
 # Print the scatterplot
 print(geol_sigs_scatterplot)
 
-ggsave("E:/SDSU_GEOG/Thesis/Data/Signatures/figures_v2/geol_age_BFI_igneous_scatterplot.png", width = 10, height = 4, dpi = 300,bg = "white")
+ggsave("E:/SDSU_GEOG/Thesis/Data/Signatures/figures_v2/geol_age_BFI_igneous_scatterplot.png", width = 9, height = 4, dpi = 300,bg = "white")
 
 
 
