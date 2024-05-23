@@ -177,19 +177,20 @@ cor_spearman <- cor.test(nwi_sigs_camels$area_frac, nwi_sigs_camels$RecessionPar
 
 # correlations, include p-value for significance
 cor_test <- nwi_sigs_camels %>%
-  select(fresh_no_giw, TotalRR, RR_Seasonality, EventRR, Recession_a_Seasonality,
+  select(area_frac, TotalRR, RR_Seasonality, EventRR, Recession_a_Seasonality,
          AverageStorage, RecessionParameters_a, RecessionParameters_b, RecessionParameters_T0,
          First_Recession_Slope, Mid_Recession_Slope, EventRR_TotalRR_ratio,
          VariabilityIndex, BFI, BFI_90, BaseflowRecessionK) %>% 
-  select(fresh_no_giw, AverageStorage, BFI, BFI_90, BaseflowRecessionK, Recession_a_Seasonality, TotalRR) %>%
+  select(area_frac, AverageStorage, BFI, BFI_90, BaseflowRecessionK, Recession_a_Seasonality, TotalRR) %>%
   as.data.frame() %>% 
   select(-geometry) %>% 
   # filter(fresh_no_giw > 0.1)
-  gather(variable, value, -fresh_no_giw) %>% 
+  gather(variable, value, -area_frac) %>% 
   group_by(variable) %>%
-  do(tidy(cor.test(.$value, .$fresh_no_giw, method = "spearman"))) %>%
+  do(tidy(cor.test(.$value, .$area_frac, method = "spearman"))) %>%
   select(variable, estimate, p.value) %>% 
-  mutate(p.value = format(p.value, scientific = FALSE))
+  mutate(across(where(is.numeric), signif, 2))
+  # mutate(p.value = format(p.value, scientific = FALSE))
   
 # cor_ref <- nwi_sigs_camels %>%
 #   left_join(camels_attribs %>% select(gauge_id, slope_mean), by = "gauge_id") %>% 
@@ -203,7 +204,7 @@ cor_test <- nwi_sigs_camels %>%
 #   mutate(p.value = format(p.value, scientific = FALSE))
 
   
-# write.csv(cor_test, "E:/SDSU_GEOG/Thesis/Data/Signatures/figures_v2/sig_fresh_no_giw_corr.csv")
+# write.csv(cor_test, "E:/SDSU_GEOG/Thesis/Data/Signatures/figures_v2/sig_giw_corr.csv")
 
 corr_iso = nwi_sigs_camels %>% 
   select(area_frac, EventRR, TotalRR, RR_Seasonality, Recession_a_Seasonality, AverageStorage, RecessionParameters_a,
@@ -365,14 +366,14 @@ nwi_sigs_camels_plotting = nwi_sigs_camels %>%
 nwi_sigs_camels_long <- pivot_longer(nwi_sigs_camels_plotting, cols = c(-area_frac,-fresh_no_giw, -gauge_id, -NA_L1KEY), names_to = "signature", values_to = "sig_value")
 
 # Create scatterplot with facetting
-nwi_sigs_scatterplot <- ggplot(nwi_sigs_camels_long, aes(x = area_frac, y = sig_value, shape = NA_L1KEY)) +
-  geom_point(size = 4, color = "blue") +  # Increase the size of dots
-  # scale_color_manual(values = c("8  EASTERN TEMPERATE FORESTS" = "blue","5  NORTHERN FORESTS"= "red"))+
-  scale_shape_manual(values = c("8  EASTERN TEMPERATE FORESTS" = 21,"5  NORTHERN FORESTS"= 4))+
+nwi_sigs_scatterplot <- ggplot(nwi_sigs_camels_long, aes(x = area_frac, y = sig_value, fill = NA_L1KEY)) +
+  geom_point(size = 4, shape = 21, color = "white", stroke = 0.5) +  # Increase the size of dots
+  scale_fill_manual(values = c("8  EASTERN TEMPERATE FORESTS" = "blue","5  NORTHERN FORESTS"= "red"))+
+  # scale_shape_manual(values = c("8  EASTERN TEMPERATE FORESTS" = 21,"5  NORTHERN FORESTS"= 4))+
   facet_wrap(~ signature, scales = "free", ncol = 3) +  # Facet by the variable
   xlab("Isolated Wetland Area Fraction") +
   ylab("Signature Value") +
-  labs(color = "Region") +
+  labs(fill = "Region") +
   theme_minimal()+
   theme(
     legend.position = "bottom"  # Arrange legend items horizontally
@@ -386,7 +387,7 @@ nwi_sigs_scatterplot <- ggplot(nwi_sigs_camels_long, aes(x = area_frac, y = sig_
 print(nwi_sigs_scatterplot)
 
 # ggsave("E:/SDSU_GEOG/Thesis/Data/Signatures/figures_v2/sigs_isolated_camels_scatterplot.png", width = 10.5, height = 6, dpi = 300,bg = "white")
-# ggsave("E:/SDSU_GEOG/Thesis/Data/Signatures/figures_v2/sigs_isolated_eastfor_bfi_scatterplot_v2.png", width = 7, height = 4, dpi = 300,bg = "white")
+ggsave("E:/SDSU_GEOG/Thesis/Data/Signatures/figures_v2/sigs_isolated_eastfor_bfi_scatterplot_v2.png", width = 6, height = 4, dpi = 300,bg = "white")
 
 
 # same plot, but add axis limits for each signature
